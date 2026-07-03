@@ -8,9 +8,12 @@ db_url = settings.database_url
 if db_url == "sqlite:///./nombarecur.db" and os.environ.get("VERCEL"):
     db_url = "sqlite:////tmp/nombarecur.db"
 
+# check_same_thread is only valid for SQLite — omit it for PostgreSQL
+_connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+
 engine = create_engine(
     db_url,
-    connect_args={"check_same_thread": False},  # SQLite only
+    connect_args=_connect_args,
     echo=(settings.app_env == "sandbox"),       # SQL logging in sandbox
 )
 
