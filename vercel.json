@@ -10,5 +10,15 @@
       "src": "/(.*)",
       "dest": "app/main.py"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/billing",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/recovery",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }

@@ -43,6 +43,20 @@ static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+@app.get("/api/cron/billing", tags=["Vercel Cron"])
+async def cron_billing():
+    """Triggered by Vercel Cron every 5 minutes to run the billing loop for all tenants."""
+    from app.services.scheduler import run_billing_cycle
+    processed = await run_billing_cycle()
+    return {"message": "Billing cycle complete", "processed": processed}
+
+@app.get("/api/cron/recovery", tags=["Vercel Cron"])
+async def cron_recovery():
+    """Triggered by Vercel Cron every 15 minutes to recover dropped webhooks."""
+    from app.services.scheduler import run_crash_recovery
+    await run_crash_recovery()
+    return {"message": "Crash recovery complete"}
+
 @app.get("/")
 def serve_dashboard():
     index_path = os.path.join(static_dir, "index.html")
