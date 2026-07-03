@@ -13,10 +13,12 @@ from app.services.scheduler import start_scheduler, shutdown_scheduler
 async def lifespan(app: FastAPI):
     # Startup
     create_db_and_tables()
-    start_scheduler()
+    if not os.environ.get("VERCEL"):
+        start_scheduler()
     yield
     # Shutdown
-    shutdown_scheduler()
+    if not os.environ.get("VERCEL"):
+        shutdown_scheduler()
 
 
 app = FastAPI(
