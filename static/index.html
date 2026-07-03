@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NombaRecur - Merchant Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo"></div>
+                <h2>NombaRecur</h2>
+            </div>
+            <nav>
+                <a href="#" class="active" data-view="dashboard">Dashboard</a>
+                <a href="#" data-view="plans">Plans</a>
+                <a href="#" data-view="customers">Customers</a>
+                <a href="#" data-view="simulator">Checkout Simulator</a>
+            </nav>
+            <div class="tenant-status" id="tenantStatus">
+                <span class="status-indicator yellow"></span> Not Configured
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <h1 id="pageTitle">Dashboard</h1>
+                <button id="setupBtn" class="btn primary">Setup API Keys</button>
+            </header>
+
+            <!-- Views -->
+            <div id="views">
+                <!-- Dashboard View -->
+                <div class="view active" id="view-dashboard">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Active Subscriptions</h3>
+                            <p class="value" id="activeSubsCount">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Revenue</h3>
+                            <p class="value" id="totalRevenue">₦0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Pending Renewals</h3>
+                            <p class="value" id="pendingRenewals">0</p>
+                        </div>
+                    </div>
+                    <div class="card mt-2">
+                        <div class="flex-between" style="margin-bottom: 16px;">
+                            <h3 style="margin-bottom: 0;">Recent Billing Attempts</h3>
+                            <div style="display:flex;gap:8px;">
+                                <button id="triggerBillingBtn" class="btn" style="padding:6px 12px;font-size:13px;background:#7c3aed;color:white;">⚡ Trigger Billing Now</button>
+                                <button id="reconcileBtn" class="btn primary" style="padding: 6px 12px; font-size: 13px;">Reconcile Pending</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Amount</th>
+                                        <th>Rail</th>
+                                        <th>Status</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="billingLogBody">
+                                    <tr><td colspan="5" class="text-center">No billing attempts yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plans View -->
+                <div class="view" id="view-plans">
+                    <div class="card">
+                        <h3>Create New Plan</h3>
+                        <form id="createPlanForm">
+                            <div class="form-group">
+                                <label>Plan Name</label>
+                                <input type="text" id="planName" placeholder="e.g. Pro Monthly" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₦)</label>
+                                <input type="number" id="planAmount" placeholder="10000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Billing Interval</label>
+                                <select id="planInterval" required>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="5_minutes">Every 5 Minutes (Demo)</option>
+                                    <option value="4_minutes">Every 4 Minutes (Demo)</option>
+                                    <option value="1_minute">Every 1 Minute (Demo)</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn primary">Create Plan</button>
+                        </form>
+                    </div>
+                    <div class="card mt-2">
+                        <h3>Your Plans</h3>
+                        <div id="plansList" class="flex-list"></div>
+                    </div>
+                </div>
+
+                <!-- Customers View -->
+                <div class="view" id="view-customers">
+                    <div class="card">
+                        <h3>Register Customer</h3>
+                        <form id="createCustomerForm">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="customerEmail" placeholder="jane@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>External ID</label>
+                                <input type="text" id="customerExtId" placeholder="user_123" required>
+                            </div>
+                            <button type="submit" class="btn primary">Register Customer</button>
+                        </form>
+                    </div>
+                    
+                    <div class="card mt-2">
+                        <div class="flex-between">
+                            <h3>Import from CSV</h3>
+                        </div>
+                        <p class="text-muted" style="font-size: 14px; margin-bottom: 12px;">CSV must have <code>email</code> and <code>external_id</code> headers.</p>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="file" id="csvFileInput" accept=".csv" style="flex: 1; padding: 8px;">
+                            <button id="importCsvBtn" class="btn primary">Import CSV</button>
+                        </div>
+                    </div>
+                    <div class="card mt-2">
+                        <h3>Your Customers</h3>
+                        <div id="customersList" class="flex-list"></div>
+                    </div>
+                </div>
+
+                <!-- Simulator View -->
+                <div class="view" id="view-simulator">
+                    <div class="card">
+                        <h3>Simulate Subscription Checkout</h3>
+                        <p class="text-muted">Select a plan and customer to generate an initial checkout link. This mimics what your frontend would do to setup the recurring mandate.</p>
+                        <form id="simulateForm">
+                            <div class="form-group">
+                                <label>Customer</label>
+                                <select id="simCustomer" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Plan</label>
+                                <select id="simPlan" required></select>
+                            </div>
+                            <button type="submit" class="btn primary" id="generateLinkBtn">Generate Nomba Checkout Link</button>
+                        </form>
+                    </div>
+                    
+                    <div id="checkoutResult" class="card mt-2 hidden" style="border: 1px solid #10b981; background: rgba(16, 185, 129, 0.05);">
+                        <h3 style="color: #10b981;">Checkout Generated!</h3>
+                        <p>Click below to open Nomba's hosted sandbox checkout. Use OTP <strong>9999</strong> to simulate success.</p>
+                        <a id="checkoutLinkBtn" href="#" target="_blank" class="btn" style="background: #10b981; color: white;">Open Checkout ↗</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="setupModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin-bottom: 0;">Initialize Tenant</h2>
+                <span id="closeModalBtn" style="cursor: pointer; font-size: 24px; color: var(--text-muted);">&times;</span>
+            </div>
+            <p class="text-muted">Enter your Nomba Sandbox credentials to generate your NombaRecur API key.</p>
+            <form id="setupForm">
+                <div class="form-group">
+                    <label>Parent Account ID <span style="font-size:11px;color:#94a3b8;">(from Nomba email — shared parent)</span></label>
+                    <input type="text" id="nombaAccountId" placeholder="f666ef9b-..." required>
+                </div>
+                <div class="form-group">
+                    <label>Sub-Account ID <span style="font-size:11px;color:#94a3b8;">(your team's assigned sub-account)</span></label>
+                    <input type="text" id="nombaSubAccountId" placeholder="263f3870-...">
+                </div>
+                <div class="form-group">
+                    <label>Nomba Client ID</label>
+                    <input type="text" id="nombaClientId" required>
+                </div>
+                <div class="form-group">
+                    <label>Nomba Client Secret</label>
+                    <input type="password" id="nombaClientSecret" required>
+                </div>
+                <div class="form-group">
+                    <label>Environment</label>
+                    <select id="nombaEnv">
+                        <option value="sandbox">Sandbox (Testing)</option>
+                        <option value="production">Production (Live)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Your Webhook URL (Optional)</label>
+                    <input type="url" id="webhookUrl" placeholder="https://your-domain.com/v1/webhooks/nomba">
+                </div>
+                <button type="submit" class="btn primary full-width">Initialize Tenant</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="messageModal">
+        <div class="modal-content">
+            <h2 id="messageModalTitle" style="margin-bottom: 8px;">Message</h2>
+            <p id="messageModalText" style="margin-bottom: 16px;"></p>
+            <button id="messageModalBtn" class="btn primary full-width">OK</button>
+        </div>
+    </div>
+
+    <!-- VA Provisioning Failure Modal -->
+    <div class="modal" id="vaRetryModal">
+        <div class="modal-content">
+            <div style="text-align:center; margin-bottom: 12px;">
+                <span style="font-size: 36px;">🏦</span>
+            </div>
+            <h2 style="margin-bottom: 8px; color: #f59e0b;">Virtual Account Not Ready</h2>
+            <p id="vaRetryText" style="margin-bottom: 20px; color: #94a3b8; font-size: 14px;"></p>
+            <div style="display:flex; gap: 10px;">
+                <button id="vaRetryBtn" class="btn primary full-width">Retry VA Creation</button>
+                <button id="vaRetryDismissBtn" class="btn full-width" style="background: var(--bg-lighter);">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

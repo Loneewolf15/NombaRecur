@@ -21,6 +21,9 @@ build/
 *.db
 *.sqlite3
 
+# SDKs
+sdk/
+
 # IDE
 .idea/
 .vscode/

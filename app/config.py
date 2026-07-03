@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     # Encryption
     fernet_key: str
 
+    # Email (SMTP)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = "noreply@nombarecur.example.com"
+    smtp_password: str = "placeholder-smtp-password"
+    smtp_from_name: str = "NombaRecur Billing"
+
+    # Email (Sendbyte)
+    sendbyte_api_key: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
