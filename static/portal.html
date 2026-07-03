@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Portal - NombaRecur</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #f8fafc; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding-top: 40px; }
+        .portal-container { width: 100%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 32px; }
+        .text-center { text-align: center; }
+        .mt-4 { margin-top: 24px; }
+        .sub-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .sub-card.canceled { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="portal-container">
+        <div class="text-center" style="margin-bottom: 24px;">
+            <h2>Customer Portal</h2>
+            <p class="text-muted">Manage your active subscriptions</p>
+        </div>
+
+        <form id="loginForm" style="display: flex; gap: 8px; margin-bottom: 32px;">
+            <input type="email" id="emailInput" placeholder="Enter your email address" required style="flex: 1;">
+            <button type="submit" class="btn primary">Find Subscriptions</button>
+        </form>
+
+        <div id="loading" class="text-center text-muted hidden">Loading...</div>
+        
+        <div id="subsContainer"></div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('emailInput');
+        const subsContainer = document.getElementById('subsContainer');
+        const loading = document.getElementById('loading');
+        let currentEmail = '';
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            currentEmail = emailInput.value.trim();
+            if(!currentEmail) return;
+            
+            subsContainer.innerHTML = '';
+            loading.classList.remove('hidden');
+            
+            try {
+                const res = await fetch(`/v1/portal/subscriptions?email=${encodeURIComponent(currentEmail)}`);
+                const data = await res.json();
+                loading.classList.add('hidden');
+                
+                if (data.length === 0) {
+                    subsContainer.innerHTML = '<p class="text-center text-muted">No subscriptions found for this email.</p>';
+                    return;
+                }
+                
+                renderSubs(data);
+            } catch (err) {
+                loading.classList.add('hidden');
+                subsContainer.innerHTML = '<p class="text-center" style="color:#ef4444;">Failed to load subscriptions.</p>';
+            }
+        });
+
+        function renderSubs(subs) {
+            subsContainer.innerHTML = subs.map(s => {
+                const isCanceled = s.status === 'canceled';
+                const btn = isCanceled 
+                    ? `<span class="badge">Canceled</span>`
+                    : `<button class="btn btn-danger" onclick="cancelSub('${s.id}')">Cancel Subscription</button>`;
+                
+                return `
+                <div class="sub-card ${isCanceled ? 'canceled' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div>
+                            <h3 style="margin-bottom:4px;">${s.plan_name}</h3>
+                            <div class="text-muted" style="font-size:14px;">Billed by: <strong>${s.tenant_name}</strong></div>
+                        </div>
+                        <div style="font-size:18px; font-weight:600;">₦${(s.amount_kobo/100).toLocaleString()}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:12px; color:#64748b;">
+                            ${isCanceled ? 'Subscription has been canceled.' : `Next billing: ${new Date(s.next_billing_at).toLocaleDateString()}`}
+                        </div>
+                        ${btn}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        window.cancelSub = async function(id) {
+            if(!confirm("Are you sure you want to cancel this subscription?")) return;
+            
+            try {
+                const res = await fetch(`/v1/portal/subscriptions/${id}/cancel?email=${encodeURIComponent(currentEmail)}`, {
+                    method: 'POST'
+                });
+                if(res.ok) {
+                    alert("Subscription canceled successfully.");
+                    // Reload
+                    loginForm.dispatchEvent(new Event('submit'));
+                } else {
+                    alert("Failed to cancel subscription.");
+                }
+            } catch (e) {
+                alert("Network error.");
+            }
+        }
+    </script>
+</body>
+</html>

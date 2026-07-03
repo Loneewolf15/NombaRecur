@@ -24,6 +24,9 @@ const loadingOverlay = document.getElementById("loadingOverlay");
 // State
 let plans = [];
 let customers = [];
+let subscriptions = [];
+let revenueChartInstance = null;
+let railChartInstance = null;
 
 // Init
 function init() {
@@ -185,20 +188,23 @@ setupForm.addEventListener("submit", async (e) => {
 async function loadData() {
     if (!apiKey) return;
 
-    // Fetch plans and customers from the API
+    // Fetch plans, customers, and subscriptions from the API
     try {
-        const [plansRes, customersRes] = await Promise.all([
+        const [plansRes, customersRes, subsRes] = await Promise.all([
             fetch(`${API_BASE}/v1/plans/`, { headers: { "X-API-Key": apiKey } }),
-            fetch(`${API_BASE}/v1/customers/`, { headers: { "X-API-Key": apiKey } })
+            fetch(`${API_BASE}/v1/customers/`, { headers: { "X-API-Key": apiKey } }),
+            fetch(`${API_BASE}/v1/subscriptions/`, { headers: { "X-API-Key": apiKey } })
         ]);
         if (plansRes.ok) plans = await plansRes.json();
         if (customersRes.ok) customers = await customersRes.json();
+        if (subsRes.ok) subscriptions = await subsRes.json();
     } catch (err) {
-        console.error("Failed to load plans/customers", err);
+        console.error("Failed to load plans/customers/subs", err);
     }
 
     renderPlans();
     renderCustomers();
+    renderSubscriptions();
     updateSimDropdowns();
 
     // Load dashboard stats
@@ -220,9 +226,59 @@ async function loadData() {
                 tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No billing attempts yet.</td></tr>`;
             }
         }
+        
+        // Fetch and render analytics
+        const analyticsRes = await fetch(`${API_BASE}/v1/dashboard/analytics`, {
+            headers: { "X-API-Key": apiKey }
+        });
+        if (analyticsRes.ok) {
+            const analytics = await analyticsRes.json();
+            renderCharts(analytics);
+        }
     } catch (err) {
         console.error("Failed to load dashboard stats", err);
     }
+}
+
+function renderCharts(data) {
+    // Revenue Line Chart
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    if (revenueChartInstance) revenueChartInstance.destroy();
+    revenueChartInstance = new Chart(revCtx, {
+        type: 'line',
+        data: {
+            labels: data.revenue_trend.labels,
+            datasets: [{
+                label: 'Revenue (₦)',
+                data: data.revenue_trend.data,
+                borderColor: '#7c3aed',
+                tension: 0.3,
+                fill: true,
+                backgroundColor: 'rgba(124, 58, 237, 0.1)'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Rail Pie Chart
+    const railCtx = document.getElementById('railChart').getContext('2d');
+    if (railChartInstance) railChartInstance.destroy();
+    railChartInstance = new Chart(railCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Card (Initial)', 'Card (Recurring)', 'Direct Debit', 'Virtual Account'],
+            datasets: [{
+                data: [
+                    data.rail_breakdown.card_initial,
+                    data.rail_breakdown.card_recurring,
+                    data.rail_breakdown.direct_debit,
+                    data.rail_breakdown.virtual_account
+                ],
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
 }
 
 function renderAttemptsTable(tableBody, attempts) {
@@ -580,6 +636,51 @@ function renderCustomers() {
         </div>
     `).join("") || "<p class='text-muted'>No customers registered yet.</p>";
 }
+
+function renderSubscriptions() {
+    const list = document.getElementById("subscriptionsList");
+    if (!list) return;
+    list.innerHTML = subscriptions.map(s => {
+        const plan = plans.find(p => p.id === s.plan_id) || { name: 'Unknown Plan', amount_kobo: 0 };
+        const customer = customers.find(c => c.id === s.customer_id) || { email: 'Unknown' };
+        const statusClass = s.status === 'active' ? 'success' : s.status === 'canceled' ? '' : 'error';
+        const cancelBtn = s.status !== 'canceled' 
+            ? `<button class="btn btn-danger" onclick="cancelSubscription('${s.id}')">Cancel</button>`
+            : `<span class="text-muted">Canceled</span>`;
+            
+        return `
+        <div class="list-item flex-between">
+            <div>
+                <strong>${customer.email}</strong> - ${plan.name} (₦${(plan.amount_kobo / 100).toFixed(2)})
+                <span class="badge ${statusClass}" style="margin-left: 8px;">${s.status}</span>
+                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Next Billing: ${new Date(s.next_billing_at).toLocaleString()}</div>
+            </div>
+            ${cancelBtn}
+        </div>
+        `;
+    }).join("") || "<p class='text-muted'>No subscriptions yet.</p>";
+}
+
+window.cancelSubscription = async function(id) {
+    if (!confirm("Are you sure you want to cancel this subscription? It will stop immediately.")) return;
+    try {
+        showLoading();
+        const res = await fetch(`${API_BASE}/v1/subscriptions/${id}/cancel`, {
+            method: "POST",
+            headers: { "X-API-Key": apiKey }
+        });
+        hideLoading();
+        if (res.ok) {
+            showMessage("Success", "Subscription canceled successfully!");
+            loadData();
+        } else {
+            showMessage("Error", "Failed to cancel subscription", true);
+        }
+    } catch (err) {
+        hideLoading();
+        showMessage("Error", "Failed to cancel subscription", true);
+    }
+};
 
 function updateSimDropdowns() {
     document.getElementById("simCustomer").innerHTML = customers.map(c => `<option value="${c.id}">${c.email}</option>`).join("");

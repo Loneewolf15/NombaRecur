@@ -6,6 +6,7 @@
     <title>NombaRecur - Merchant Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="app">
@@ -17,6 +18,7 @@
             </div>
             <nav>
                 <a href="#" class="active" data-view="dashboard">Dashboard</a>
+                <a href="#" data-view="subscriptions">Subscriptions</a>
                 <a href="#" data-view="plans">Plans</a>
                 <a href="#" data-view="customers">Customers</a>
                 <a href="#" data-view="simulator">Checkout Simulator</a>
@@ -52,6 +54,16 @@
                             <p class="value" id="pendingRenewals">0</p>
                         </div>
                     </div>
+                    <div class="charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 16px;">
+                        <div class="card">
+                            <h3 style="margin-bottom:12px;">Revenue Trend</h3>
+                            <div><canvas id="revenueChart" height="200"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 style="margin-bottom:12px;">Rail Success Breakdown</h3>
+                            <div><canvas id="railChart" height="200"></canvas></div>
+                        </div>
+                    </div>
                     <div class="card mt-2">
                         <div class="flex-between" style="margin-bottom: 16px;">
                             <h3 style="margin-bottom: 0;">Recent Billing Attempts</h3>
@@ -76,6 +88,14 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Subscriptions View -->
+                <div class="view" id="view-subscriptions">
+                    <div class="card">
+                        <h3>Active Subscriptions</h3>
+                        <div id="subscriptionsList" class="flex-list"></div>
                     </div>
                 </div>
 

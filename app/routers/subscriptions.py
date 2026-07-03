@@ -103,3 +103,20 @@ async def create_subscription(data: SubscriptionCreate, session: Session = Depen
         session.add(attempt)
         session.commit()
         raise HTTPException(status_code=500, detail=f"Failed to generate checkout link: {e}")
+
+@router.post("/{subscription_id}/cancel")
+def cancel_subscription(subscription_id: str, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Cancel an active subscription. It will not renew at the end of the current billing cycle."""
+    sub = session.get(Subscription, subscription_id)
+    if not sub or sub.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+        
+    if sub.status == "canceled":
+        return {"message": "Subscription is already canceled", "status": sub.status}
+        
+    sub.status = "canceled"
+    sub.canceled_at = datetime.utcnow()
+    session.add(sub)
+    session.commit()
+    
+    return {"message": "Subscription canceled successfully", "status": sub.status, "canceled_at": sub.canceled_at}

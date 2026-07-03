@@ -92,9 +92,49 @@ def get_dashboard_stats(query_params: DashboardQuery = None, session: Session = 
 
     return {
         "active_subscriptions": active_subs,
-        "pending_renewals": pending_renewals,
         "total_revenue_ngn": total_revenue_ngn,
+        "pending_renewals": pending_renewals,
         "recent_attempts": attempts_data
+    }
+
+@router.get("/analytics")
+def get_dashboard_analytics(session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Fetch aggregated analytics for charting."""
+    # Rail breakdown
+    rail_counts = {
+        "card_initial": session.exec(select(func.count(BillingAttempt.id)).where(BillingAttempt.tenant_id == tenant.id, BillingAttempt.rail == "card_initial", BillingAttempt.status == "success")).first() or 0,
+        "card_recurring": session.exec(select(func.count(BillingAttempt.id)).where(BillingAttempt.tenant_id == tenant.id, BillingAttempt.rail == "card_recurring", BillingAttempt.status == "success")).first() or 0,
+        "direct_debit": session.exec(select(func.count(BillingAttempt.id)).where(BillingAttempt.tenant_id == tenant.id, BillingAttempt.rail == "direct_debit", BillingAttempt.status == "success")).first() or 0,
+        "virtual_account": session.exec(select(func.count(BillingAttempt.id)).where(BillingAttempt.tenant_id == tenant.id, BillingAttempt.rail == "virtual_account", BillingAttempt.status == "success")).first() or 0,
+    }
+
+    # Simplistic revenue trend: last 7 attempts as proxies for time
+    attempts = session.exec(
+        select(BillingAttempt)
+        .where(BillingAttempt.tenant_id == tenant.id, BillingAttempt.status == "success")
+        .order_by(BillingAttempt.attempted_at.desc())
+        .limit(10)
+    ).all()
+    
+    attempts.reverse() # chronological
+    
+    revenue_trend = []
+    labels = []
+    for a in attempts:
+        revenue_trend.append(a.amount_kobo / 100)
+        labels.append(a.attempted_at.strftime("%H:%M"))
+        
+    # If no data, provide empty structure for Chart.js
+    if not labels:
+        labels = ["No Data"]
+        revenue_trend = [0]
+        
+    return {
+        "rail_breakdown": rail_counts,
+        "revenue_trend": {
+            "labels": labels,
+            "data": revenue_trend
+        }
     }
 
 @router.post("/trigger-billing")

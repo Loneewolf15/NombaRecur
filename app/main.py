@@ -35,8 +35,9 @@ app.include_router(plans.router, prefix="/v1/plans", tags=["Plans"])
 app.include_router(customers.router, prefix="/v1/customers", tags=["Customers"])
 app.include_router(subscriptions.router, prefix="/v1/subscriptions", tags=["Subscriptions"])
 app.include_router(webhooks.router, prefix="/v1/webhooks", tags=["Webhooks"])
-from app.routers import dashboard
+from app.routers import dashboard, portal
 app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
+app.include_router(portal.router, prefix="/v1/portal", tags=["Portal"])
 
 # Serve frontend
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -62,4 +63,11 @@ def serve_dashboard():
     index_path = os.path.join(static_dir, "index.html")
     if not os.path.exists(index_path):
         return {"message": "Frontend not built yet."}
+    return FileResponse(index_path)
+
+@app.get("/portal")
+def serve_portal():
+    index_path = os.path.join(static_dir, "portal.html")
+    if not os.path.exists(index_path):
+        return {"message": "Portal not built yet."}
     return FileResponse(index_path)
