@@ -164,6 +164,29 @@
                         </div>
                     </div>
                     <div class="card mt-2">
+                        <h3>Enroll Direct Debit Mandate</h3>
+                        <p class="text-muted" style="font-size:14px;margin-bottom:12px;">Link a customer's bank account for automatic direct debit payments (Rail 2). Requires a live Nigerian bank account.</p>
+                        <form id="enrollMandateForm">
+                            <div class="form-group">
+                                <label>Customer</label>
+                                <select id="mandateCustomer" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Account Number</label>
+                                <input type="text" id="mandateAccountNumber" placeholder="0123456789" maxlength="10" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Bank Code</label>
+                                <input type="text" id="mandateBankCode" placeholder="e.g. 044 (Access), 058 (GTB), 011 (First Bank)" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="mandatePhone" placeholder="08012345678">
+                            </div>
+                            <button type="submit" class="btn primary">Enroll Mandate</button>
+                        </form>
+                    </div>
+                    <div class="card mt-2">
                         <h3>Your Customers</h3>
                         <div id="customersList" class="flex-list"></div>
                     </div>
@@ -190,7 +213,15 @@
                     <div id="checkoutResult" class="card mt-2 hidden" style="border: 1px solid #10b981; background: rgba(16, 185, 129, 0.05);">
                         <h3 style="color: #10b981;">Checkout Generated!</h3>
                         <p>Click below to open Nomba's hosted sandbox checkout. Use OTP <strong>9999</strong> to simulate success.</p>
-                        <a id="checkoutLinkBtn" href="#" target="_blank" class="btn" style="background: #10b981; color: white;">Open Checkout ↗</a>
+                        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+                            <div>
+                                <a id="checkoutLinkBtn" href="#" target="_blank" class="btn" style="background: #10b981; color: white;">Open Checkout ↗</a>
+                                <p style="font-size:12px;color:#64748b;margin-top:8px;">Or scan the QR code to open on mobile</p>
+                            </div>
+                            <div style="text-align:center;">
+                                <img id="checkoutQR" src="" alt="Checkout QR" width="140" height="140" style="border-radius:8px;border:3px solid rgba(16,185,129,0.3);">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

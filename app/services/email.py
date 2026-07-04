@@ -99,6 +99,51 @@ def send_payment_failed_email(customer_email: str, customer_name: str, amount_na
     return _send(customer_email, subject, html_body, text_body)
 
 
+def send_va_card_email(customer_email: str, customer_name: str, va_account_number: str, bank_name: str = "Nomba MFB") -> bool:
+    """
+    Sent when a Virtual Account is provisioned for a customer.
+    Includes the NUBAN and a QR code image so the customer can pay by bank transfer.
+    """
+    subject = "Your dedicated payment account is ready"
+    display_name = customer_name or customer_email
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={va_account_number}&format=png"
+
+    html_body = f"""
+    <html><body style="font-family: sans-serif; color: #333; max-width: 480px; margin: 0 auto;">
+      <h2 style="color: #2563eb;">Your Virtual Account is Ready 🏦</h2>
+      <p>Hi {display_name},</p>
+      <p>Your dedicated payment account has been set up. You can fund your subscription
+         at any time by transferring to:</p>
+      <div style="background:#f1f5f9;border-radius:8px;padding:20px;text-align:center;margin:20px 0;">
+        <p style="font-size:13px;color:#64748b;margin:0 0 4px;">Bank</p>
+        <p style="font-size:16px;font-weight:600;margin:0 0 16px;">{bank_name}</p>
+        <p style="font-size:13px;color:#64748b;margin:0 0 4px;">Account Number</p>
+        <p style="font-size:28px;font-weight:700;letter-spacing:3px;color:#1e40af;margin:0 0 20px;">{va_account_number}</p>
+        <img src="{qr_url}" alt="QR code for {va_account_number}"
+             width="160" height="160"
+             style="border:4px solid #e2e8f0;border-radius:8px;"/>
+        <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;">Scan to copy account number</p>
+      </div>
+      <p style="font-size:13px;color:#64748b;">
+        Payments sent to this account are automatically applied to your subscription.
+        Keep this number safe — it is unique to you.
+      </p>
+    </body></html>
+    """
+
+    text_body = (
+        f"Hi {display_name},\n\n"
+        f"Your dedicated payment account is ready.\n\n"
+        f"Bank: {bank_name}\n"
+        f"Account Number: {va_account_number}\n\n"
+        f"Transfer to this account to fund your subscription. "
+        f"Payments are applied automatically.\n\n"
+        f"— NombaRecur Billing"
+    )
+
+    return _send(customer_email, subject, html_body, text_body)
+
+
 def send_payment_success_email(customer_email: str, customer_name: str, amount_naira: str, plan_name: str, next_billing_date: str) -> bool:
     """
     Sent when a payment (any rail) is confirmed via webhook.

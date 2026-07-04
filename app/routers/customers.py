@@ -19,6 +19,12 @@ class CustomerCreate(BaseModel):
     phone: Optional[str] = None
 
 
+class MandateEnroll(BaseModel):
+    account_number: str
+    bank_code: str
+    phone: Optional[str] = None
+
+
 def _provision_va_background(customer_id: str, tenant_id: str):
     """
     Provisions a dedicated Virtual Account for a customer.
@@ -46,6 +52,12 @@ def _provision_va_background(customer_id: str, tenant_id: str):
                 session.add(customer)
                 session.commit()
                 logger.info(f"VA provisioned for customer {customer_id}: {customer.va_account_number}")
+                # Notify customer with their VA card email
+                try:
+                    from app.services.email import send_va_card_email
+                    send_va_card_email(customer.email, customer.name, customer.va_account_number)
+                except Exception as email_err:
+                    logger.warning(f"VA card email failed for {customer_id}: {email_err}")
             except Exception as e:
                 logger.warning(f"VA provisioning failed for customer {customer_id}: {e}")
 
@@ -112,6 +124,63 @@ def retry_provision_va(customer_id: str, background_tasks: BackgroundTasks, sess
         return {"message": "VA already provisioned", "va_account_number": customer.va_account_number}
     background_tasks.add_task(_provision_va_background, customer.id, tenant.id)
     return {"message": "VA provisioning started", "customer_id": customer_id}
+
+@router.post("/{customer_id}/enroll-mandate")
+def enroll_direct_debit(
+    customer_id: str,
+    data: MandateEnroll,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant)
+):
+    """
+    Enroll a customer's bank account in a direct debit mandate.
+    Requires: account_number, bank_code, phone
+    """
+    from fastapi import HTTPException
+    import asyncio
+    from app.services.nomba import NombaClient
+
+    customer = session.get(Customer, customer_id)
+    if not customer or customer.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    account_number = data.account_number.strip()
+    bank_code = data.bank_code.strip()
+    phone = (data.phone or customer.phone or "").strip()
+
+    async def _run():
+        with Session(engine) as s:
+            cust = s.get(Customer, customer_id)
+            t = s.get(Tenant, tenant.id)
+            if not cust or not t:
+                return {"error": "Not found"}
+            nomba = NombaClient(t, s)
+            try:
+                result = await nomba.create_mandate(
+                    customer_account_number=account_number,
+                    bank_code=bank_code,
+                    customer_name=cust.name or cust.email,
+                    customer_phone=phone,
+                    customer_email=cust.email,
+                    merchant_reference=f"mandate_{cust.id[:8]}"
+                )
+                mandate_id = result.get("mandateId") or result.get("id") or result.get("merchantReference")
+                cust.mandate_id = mandate_id
+                cust.mandate_status = "ACTIVE"
+                s.add(cust)
+                s.commit()
+                logger.info(f"Mandate created for customer {customer_id}: {mandate_id}")
+                return {"mandate_id": mandate_id}
+            except Exception as e:
+                logger.error(f"Mandate creation failed for {customer_id}: {e}")
+                return {"error": str(e)}
+
+    result = asyncio.run(_run())
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"message": "Direct debit mandate enrolled", "mandate_id": result.get("mandate_id"), "customer_id": customer_id}
+
 
 @router.delete("/{customer_id}")
 def delete_customer(customer_id: str, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):

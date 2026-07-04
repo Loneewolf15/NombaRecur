@@ -579,6 +579,39 @@ document.getElementById("importCsvBtn").addEventListener("click", async () => {
     reader.readAsText(file);
 });
 
+// Enroll Direct Debit Mandate
+const enrollMandateForm = document.getElementById("enrollMandateForm");
+if (enrollMandateForm) {
+    enrollMandateForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const customerId = document.getElementById("mandateCustomer").value;
+        const accountNumber = document.getElementById("mandateAccountNumber").value.trim();
+        const bankCode = document.getElementById("mandateBankCode").value.trim();
+        const phone = document.getElementById("mandatePhone").value.trim();
+
+        try {
+            showLoading();
+            const res = await fetch(`${API_BASE}/v1/customers/${customerId}/enroll-mandate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+                body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode, phone })
+            });
+            const data = await res.json();
+            hideLoading();
+            if (res.ok) {
+                showMessage("Mandate Enrolled", `Direct debit mandate created! ID: ${data.mandate_id}`);
+                enrollMandateForm.reset();
+                loadData();
+            } else {
+                showMessage("Mandate Failed", data.detail || "Failed to enroll mandate. Ensure the account number and bank code are valid.", true);
+            }
+        } catch (err) {
+            hideLoading();
+            showMessage("Error", "Network error while enrolling mandate.", true);
+        }
+    });
+}
+
 // Simulate Checkout
 document.getElementById("simulateForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -604,6 +637,8 @@ document.getElementById("simulateForm").addEventListener("submit", async (e) => 
         if (data.checkout_link) {
             document.getElementById("checkoutResult").classList.remove("hidden");
             document.getElementById("checkoutLinkBtn").href = data.checkout_link;
+            const qrImg = document.getElementById("checkoutQR");
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.checkout_link)}&format=png`;
         } else {
             showMessage("Error", JSON.stringify(data), true);
         }
@@ -629,21 +664,36 @@ function renderPlans() {
 
 function renderCustomers() {
     const list = document.getElementById("customersList");
-    list.innerHTML = customers.map(c => `
+    list.innerHTML = customers.map(c => {
+        const vaSection = c.va_account_number
+            ? `<span style="color:#60a5fa;">&#127974; VA: <strong style="letter-spacing:0.5px;">${c.va_account_number}</strong>
+               <button class="btn" onclick="toggleVAQR('${c.id}','${c.va_account_number}')"
+                   style="padding:2px 8px;font-size:11px;margin-left:8px;background:rgba(96,165,250,0.12);color:#60a5fa;">QR</button>
+               </span>
+               <div id="vaqr-${c.id}" style="display:none;margin-top:8px;">
+                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(c.va_account_number)}&format=png"
+                      width="120" height="120" style="border-radius:6px;border:2px solid rgba(96,165,250,0.3);">
+               </div>`
+            : `<span style="color:#64748b; font-style:italic;">VA: provisioning...</span>`;
+        const mandateBadge = c.mandate_id
+            ? `<span style="color:#10b981;font-size:11px;margin-left:8px;">&#9679; Direct Debit enrolled</span>`
+            : '';
+        return `
         <div class="list-item flex-between">
             <div>
-                <strong>${c.email}</strong> (Ext: ${c.external_id})
+                <strong>${c.email}</strong> (Ext: ${c.external_id})${mandateBadge}
                 <div style="font-size:12px; color:#94a3b8; margin-top:4px;">ID: ${c.id}</div>
-                <div style="font-size:12px; margin-top:4px;">
-                    ${c.va_account_number
-                        ? `<span style="color:#60a5fa;">&#127974; VA: <strong style="letter-spacing:0.5px;">${c.va_account_number}</strong></span>`
-                        : `<span style="color:#64748b; font-style:italic;">VA: provisioning...</span>`}
-                </div>
+                <div style="font-size:12px; margin-top:4px;">${vaSection}</div>
             </div>
             <button class="btn btn-danger" onclick="deleteCustomer('${c.id}')">Delete</button>
-        </div>
-    `).join("") || "<p class='text-muted'>No customers registered yet.</p>";
+        </div>`;
+    }).join("") || "<p class='text-muted'>No customers registered yet.</p>";
 }
+
+window.toggleVAQR = function(customerId, vaNumber) {
+    const el = document.getElementById(`vaqr-${customerId}`);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
 
 function renderSubscriptions() {
     const list = document.getElementById("subscriptionsList");
@@ -691,8 +741,11 @@ window.cancelSubscription = async function(id) {
 };
 
 function updateSimDropdowns() {
-    document.getElementById("simCustomer").innerHTML = customers.map(c => `<option value="${c.id}">${c.email}</option>`).join("");
+    const customerOptions = customers.map(c => `<option value="${c.id}">${c.email}</option>`).join("");
+    document.getElementById("simCustomer").innerHTML = customerOptions;
     document.getElementById("simPlan").innerHTML = plans.map(p => `<option value="${p.id}">${p.name} (₦${p.amount_kobo/100})</option>`).join("");
+    const mandateSel = document.getElementById("mandateCustomer");
+    if (mandateSel) mandateSel.innerHTML = customerOptions;
 }
 
 init();
