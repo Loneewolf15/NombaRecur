@@ -35,6 +35,15 @@ def create_plan(data: PlanCreate, session: Session = Depends(get_session), tenan
     session.refresh(plan)
     return plan
 
+@router.get("/{plan_id}")
+def get_plan(plan_id: str, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Get a single plan by ID."""
+    from fastapi import HTTPException
+    plan = session.get(Plan, plan_id)
+    if not plan or plan.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
 @router.delete("/{plan_id}")
 def delete_plan(plan_id: str, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
     """Deletes a plan if no active subscriptions are tied to it."""
@@ -42,7 +51,7 @@ def delete_plan(plan_id: str, session: Session = Depends(get_session), tenant: T
     plan = session.get(Plan, plan_id)
     if not plan or plan.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Plan not found")
-        
+
     session.delete(plan)
     session.commit()
     return {"message": "Plan deleted successfully"}
