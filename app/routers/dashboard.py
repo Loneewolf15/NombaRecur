@@ -1,6 +1,9 @@
+import logging
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select, func
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_session
 from app.models.tenant import Tenant
@@ -169,31 +172,37 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
     for attempt in pending_attempts:
         try:
             res = await nomba.fetch_transaction_status(attempt.merchant_tx_ref)
-            
+
             status_msg = res.get("status", "").lower()
-            response_code = res.get("responseCode")
-            
-            if response_code in ("00", "200") or status_msg == "success":
+            response_code = res.get("responseCode", "")
+
+            # Nomba signals success via event_type=payment_success; on the status
+            # endpoint responseCode "00" or status "success"/"completed" means paid.
+            # Empty responseCode on sandbox is normal for a completed payment.
+            is_success = (
+                response_code in ("00", "200")
+                or status_msg in ("success", "completed", "successful")
+            )
+
+            if is_success:
                 subscription = session.get(Subscription, attempt.subscription_id)
                 plan = session.get(Plan, subscription.plan_id)
                 _mark_attempt_success(session, attempt, subscription, plan)
                 results["success"] += 1
             else:
+                # Nomba confirmed the payment is not yet successful — mark failed
                 attempt.status = "failed"
-                attempt.error_code = response_code
-                attempt.error_message = f"Reconciled manually: {status_msg}"
+                attempt.error_code = response_code or "NOT_PAID"
+                attempt.error_message = f"Reconciled: status={status_msg}, code={response_code}"
                 attempt.completed_at = datetime.utcnow()
                 session.add(attempt)
                 results["failed"] += 1
             session.commit()
-            
+
         except Exception as e:
-            attempt.status = "failed"
-            attempt.error_code = "MANUAL_RECONCILE_ERR"
-            attempt.error_message = str(e)
-            attempt.completed_at = datetime.utcnow()
-            session.add(attempt)
-            session.commit()
+            # API lookup itself failed (network, wrong path, etc.)
+            # DO NOT mark the attempt failed — leave it pending so it can be retried.
+            logger.error(f"Reconcile lookup error for {attempt.merchant_tx_ref}: {e}")
             results["errors"] += 1
-            
+
     return {"message": "Manual reconciliation complete", "details": results, "total_processed": len(pending_attempts)}

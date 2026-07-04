@@ -219,9 +219,5 @@ class NombaClient:
 
     async def fetch_transaction_status(self, order_reference: str) -> dict:
         """Fetches the real status of a transaction to handle missing webhooks."""
-        # Sandbox has a dedicated path; production uses the standard endpoint
-        if self.tenant.env == "sandbox":
-            path = "/sandbox/checkout/transaction"
-        else:
-            path = "/v1/checkout/transaction"
-        return await self._request("GET", path, json_data={"idType": "orderReference", "id": order_reference})
+        # Both sandbox and production use /v1/checkout/transaction
+        return await self._request("GET", "/v1/checkout/transaction", json_data={"idType": "orderReference", "id": order_reference})
