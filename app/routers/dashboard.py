@@ -19,6 +19,19 @@ class DashboardQuery(BaseModel):
     limit: int = 10
     status: Optional[str] = None
 
+
+class BankLookupRequest(BaseModel):
+    account_number: str
+    bank_code: str
+
+
+class PayoutRequest(BaseModel):
+    amount_kobo: int
+    account_number: str
+    bank_code: str
+    account_name: str
+    narration: Optional[str] = "NombaRecur Payout"
+
 @router.api_route("/search", methods=["POST", "QUERY"])
 def search_billing_attempts(query: DashboardQuery, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
     """Filter billing attempts by status."""
@@ -149,6 +162,80 @@ async def trigger_billing_now(session: Session = Depends(get_session), tenant: T
     from app.services.scheduler import run_billing_cycle
     processed = await run_billing_cycle(tenant_id=tenant.id)
     return {"message": "Billing cycle triggered", "subscriptions_processed": processed}
+
+@router.get("/balance")
+async def get_balance(session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Fetch live sub-account balance from Nomba."""
+    from app.services.nomba import NombaClient
+    nomba = NombaClient(tenant, session)
+    try:
+        data = await nomba.get_balance()
+        return {"balance": data}
+    except Exception as e:
+        logger.error(f"Balance fetch failed for tenant {tenant.id}: {e}")
+        return {"balance": None, "error": str(e)}
+
+
+@router.get("/transactions")
+async def get_transactions(page: int = 1, limit: int = 20, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Fetch Nomba transaction ledger for the sub-account."""
+    from app.services.nomba import NombaClient
+    nomba = NombaClient(tenant, session)
+    try:
+        data = await nomba.get_transactions(limit=limit, page=page)
+        return {"transactions": data}
+    except Exception as e:
+        logger.error(f"Transaction fetch failed for tenant {tenant.id}: {e}")
+        return {"transactions": [], "error": str(e)}
+
+
+@router.get("/banks")
+async def list_banks(session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Return list of Nigerian banks for dropdowns."""
+    from app.services.nomba import NombaClient
+    nomba = NombaClient(tenant, session)
+    try:
+        banks = await nomba.list_banks()
+        return {"banks": banks}
+    except Exception as e:
+        logger.error(f"Bank list fetch failed for tenant {tenant.id}: {e}")
+        return {"banks": [], "error": str(e)}
+
+
+@router.post("/lookup-bank-account")
+async def lookup_bank_account(data: BankLookupRequest, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Name-enquiry: resolve account number + bank code to an account name."""
+    from app.services.nomba import NombaClient
+    from fastapi import HTTPException
+    nomba = NombaClient(tenant, session)
+    try:
+        result = await nomba.lookup_bank_account(
+            account_number=data.account_number,
+            bank_code=data.bank_code
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/payout")
+async def payout_to_bank(data: PayoutRequest, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
+    """Transfer funds from the sub-account to an external Nigerian bank account."""
+    from app.services.nomba import NombaClient
+    from fastapi import HTTPException
+    nomba = NombaClient(tenant, session)
+    try:
+        result = await nomba.payout_to_bank(
+            amount_kobo=data.amount_kobo,
+            account_number=data.account_number,
+            bank_code=data.bank_code,
+            account_name=data.account_name,
+            narration=data.narration
+        )
+        return {"message": "Payout initiated", "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.post("/reconcile-pending")
 async def reconcile_pending_attempts(session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):

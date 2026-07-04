@@ -27,6 +27,9 @@ let customers = [];
 let subscriptions = [];
 let revenueChartInstance = null;
 let railChartInstance = null;
+let banks = [];
+let txPage = 1;
+let payoutHistory = [];
 
 // Init
 function init() {
@@ -237,9 +240,29 @@ async function loadData() {
             const analytics = await analyticsRes.json();
             renderCharts(analytics);
         }
+
+        // Live account balance
+        try {
+            const balRes = await fetch(`${API_BASE}/v1/dashboard/balance`, {
+                headers: { "X-API-Key": apiKey }
+            });
+            if (balRes.ok) {
+                const balData = await balRes.json();
+                const bal = balData.balance;
+                if (bal) {
+                    // Nomba may return availableBalance or balance (various field names)
+                    const amount = bal.availableBalance ?? bal.balance ?? bal.ledgerBalance ?? bal.amount ?? null;
+                    const el = document.getElementById("accountBalance");
+                    if (el) el.textContent = amount != null ? `₦${Number(amount).toLocaleString('en-US', {minimumFractionDigits: 2})}` : "—";
+                }
+            }
+        } catch (_) {}
     } catch (err) {
         console.error("Failed to load dashboard stats", err);
     }
+
+    // Load bank list for dropdowns (fire-and-forget)
+    if (banks.length === 0) loadBanks();
 }
 
 function renderCharts(data) {
@@ -746,6 +769,188 @@ function updateSimDropdowns() {
     document.getElementById("simPlan").innerHTML = plans.map(p => `<option value="${p.id}">${p.name} (₦${p.amount_kobo/100})</option>`).join("");
     const mandateSel = document.getElementById("mandateCustomer");
     if (mandateSel) mandateSel.innerHTML = customerOptions;
+}
+
+// ─────────────────────────────────────────────
+// Banks (for dropdowns)
+// ─────────────────────────────────────────────
+async function loadBanks() {
+    if (!apiKey) return;
+    try {
+        const res = await fetch(`${API_BASE}/v1/dashboard/banks`, { headers: { "X-API-Key": apiKey } });
+        if (!res.ok) return;
+        const data = await res.json();
+        banks = data.banks || [];
+        _populateBankDropdowns();
+    } catch (_) {}
+}
+
+function _populateBankDropdowns() {
+    if (!banks.length) return;
+    const options = `<option value="">— Select Bank —</option>` +
+        banks.map(b => `<option value="${b.bankCode || b.code}">${b.bankName || b.name} (${b.bankCode || b.code})</option>`).join("");
+    ["payoutBankCode", "mandateBankCode"].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) sel.innerHTML = options;
+    });
+}
+
+// ─────────────────────────────────────────────
+// Transaction History
+// ─────────────────────────────────────────────
+async function loadTransactions(page = 1) {
+    if (!apiKey) return;
+    txPage = page;
+    document.getElementById("txPageLabel").textContent = `Page ${page}`;
+    const tbody = document.getElementById("txTableBody");
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>`;
+
+    try {
+        const res = await fetch(`${API_BASE}/v1/dashboard/transactions?page=${page}&limit=20`, {
+            headers: { "X-API-Key": apiKey }
+        });
+        const data = await res.json();
+        const txns = data.transactions;
+
+        // Nomba may return {results:[...]} or a list directly
+        const list = Array.isArray(txns) ? txns : (txns?.results || txns?.transactions || []);
+
+        if (!list.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No transactions found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = list.map(tx => {
+            const amount = tx.amount ?? tx.transactionAmount ?? "—";
+            const type = tx.type ?? tx.transactionType ?? tx.creditDebitIndicator ?? "—";
+            const status = tx.status ?? tx.transactionStatus ?? "—";
+            const desc = tx.narration ?? tx.description ?? tx.remark ?? "—";
+            const ref = tx.sessionId ?? tx.reference ?? tx.transactionReference ?? tx.id ?? "—";
+            const date = tx.createdAt ?? tx.transactionDate ?? tx.date ?? "";
+            const typeColor = type.toString().toLowerCase().includes("credit") ? "#10b981" : "#f59e0b";
+            return `<tr>
+                <td style="font-size:11px;color:#94a3b8;">${ref}</td>
+                <td>₦${Number(amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td><span style="color:${typeColor};font-size:12px;">${type}</span></td>
+                <td><span class="badge ${status.toLowerCase() === 'success' || status.toLowerCase() === 'successful' ? 'success' : ''}">${status}</span></td>
+                <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${desc}</td>
+                <td style="font-size:12px;color:#94a3b8;">${date ? new Date(date).toLocaleString() : "—"}</td>
+            </tr>`;
+        }).join("");
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:#ef4444;">Failed to load transactions.</td></tr>`;
+    }
+}
+
+document.getElementById("refreshTxBtn")?.addEventListener("click", () => loadTransactions(txPage));
+document.getElementById("txPrevBtn")?.addEventListener("click", () => { if (txPage > 1) loadTransactions(txPage - 1); });
+document.getElementById("txNextBtn")?.addEventListener("click", () => loadTransactions(txPage + 1));
+
+// Load transactions when the tab is clicked
+document.querySelector('nav a[data-view="transactions"]')?.addEventListener("click", () => {
+    loadTransactions(1);
+});
+
+// ─────────────────────────────────────────────
+// Payouts
+// ─────────────────────────────────────────────
+document.querySelector('nav a[data-view="payouts"]')?.addEventListener("click", () => {
+    if (banks.length === 0) loadBanks();
+});
+
+document.getElementById("verifyAccountBtn")?.addEventListener("click", async () => {
+    const accountNumber = document.getElementById("payoutAccountNumber").value.trim();
+    const bankCode = document.getElementById("payoutBankCode").value.trim();
+    if (!accountNumber || !bankCode) {
+        return showMessage("Missing Info", "Enter account number and select a bank first.", true);
+    }
+    const btn = document.getElementById("verifyAccountBtn");
+    btn.textContent = "Verifying...";
+    btn.disabled = true;
+    try {
+        const res = await fetch(`${API_BASE}/v1/dashboard/lookup-bank-account`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+            body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const name = data.accountName ?? data.account_name ?? data.name ?? JSON.stringify(data);
+            document.getElementById("payoutAccountName").value = name;
+            document.getElementById("sendPayoutBtn").disabled = false;
+        } else {
+            showMessage("Verification Failed", data.detail || "Could not verify account.", true);
+        }
+    } catch (err) {
+        showMessage("Error", "Network error during verification.", true);
+    } finally {
+        btn.textContent = "Verify";
+        btn.disabled = false;
+    }
+});
+
+document.getElementById("payoutForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const amountNaira = parseFloat(document.getElementById("payoutAmount").value);
+    const accountNumber = document.getElementById("payoutAccountNumber").value.trim();
+    const bankCode = document.getElementById("payoutBankCode").value.trim();
+    const accountName = document.getElementById("payoutAccountName").value.trim();
+    const narration = document.getElementById("payoutNarration").value.trim() || "NombaRecur Payout";
+
+    if (!accountName) {
+        return showMessage("Verify First", "Please verify the account name before sending.", true);
+    }
+
+    if (!confirm(`Send ₦${amountNaira.toLocaleString()} to ${accountName} (${accountNumber})?`)) return;
+
+    try {
+        showLoading();
+        const res = await fetch(`${API_BASE}/v1/dashboard/payout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+            body: JSON.stringify({
+                amount_kobo: Math.round(amountNaira * 100),
+                account_number: accountNumber,
+                bank_code: bankCode,
+                account_name: accountName,
+                narration
+            })
+        });
+        const data = await res.json();
+        hideLoading();
+        if (res.ok) {
+            payoutHistory.unshift({ accountName, accountNumber, amountNaira, narration, time: new Date().toLocaleString() });
+            renderPayoutHistory();
+            e.target.reset();
+            document.getElementById("sendPayoutBtn").disabled = true;
+            showMessage("Payout Sent", `₦${amountNaira.toLocaleString()} sent to ${accountName} successfully.`);
+            // Refresh balance
+            loadData();
+        } else {
+            showMessage("Payout Failed", data.detail || "Transfer failed.", true);
+        }
+    } catch (err) {
+        hideLoading();
+        showMessage("Error", "Network error during payout.", true);
+    }
+});
+
+function renderPayoutHistory() {
+    const el = document.getElementById("payoutHistoryList");
+    if (!el) return;
+    if (!payoutHistory.length) {
+        el.innerHTML = `<p class="text-muted">Payouts will appear here after they are sent.</p>`;
+        return;
+    }
+    el.innerHTML = payoutHistory.map(p => `
+        <div class="list-item flex-between">
+            <div>
+                <strong>${p.accountName}</strong> — ${p.accountNumber}
+                <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${p.narration} · ${p.time}</div>
+            </div>
+            <span style="color:#10b981;font-weight:600;">₦${Number(p.amountNaira).toLocaleString('en-US',{minimumFractionDigits:2})}</span>
+        </div>
+    `).join("");
 }
 
 init();

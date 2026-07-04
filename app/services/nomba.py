@@ -217,6 +217,56 @@ class NombaClient:
         }
         return await self._request("POST", "/v1/direct-debits/debit-mandate", json_data=payload)
 
+    # --- BALANCE & TRANSACTIONS ---
+
+    async def get_balance(self) -> dict:
+        """Fetch the current balance for the sub-account (or parent account if no sub-account)."""
+        if self.sub_account_id:
+            return await self._request("GET", f"/v1/accounts/{self.sub_account_id}/balance")
+        return await self._request("GET", f"/v1/accounts/{self.account_id}/balance")
+
+    async def get_transactions(self, limit: int = 20, page: int = 1) -> dict:
+        """Fetch transaction history for the sub-account."""
+        account_id = self.sub_account_id or self.account_id
+        return await self._request(
+            "GET",
+            f"/v1/transactions/accounts/{account_id}",
+            json_data={"limit": limit, "page": page}
+        )
+
+    # --- TRANSFERS / PAYOUTS ---
+
+    async def list_banks(self) -> list:
+        """Returns the list of supported Nigerian banks with name and code."""
+        data = await self._request("GET", "/v1/transfers/banks")
+        # Nomba returns either a list directly or {banks: [...]}
+        if isinstance(data, list):
+            return data
+        return data.get("banks", data.get("results", []))
+
+    async def lookup_bank_account(self, account_number: str, bank_code: str) -> dict:
+        """Resolve bank account number to account name (name enquiry)."""
+        return await self._request(
+            "POST",
+            "/v1/transfers/bank/lookup",
+            json_data={"accountNumber": account_number, "bankCode": bank_code}
+        )
+
+    async def payout_to_bank(self, amount_kobo: int, account_number: str, bank_code: str, account_name: str, narration: str = "Payout") -> dict:
+        """Transfer funds from the sub-account to an external bank account."""
+        if not self.sub_account_id:
+            raise ValueError("sub_account_id is required for payouts")
+        amount_naira_str = f"{amount_kobo / 100:.2f}"
+        payload = {
+            "amount": amount_naira_str,
+            "accountNumber": account_number,
+            "bankCode": bank_code,
+            "accountName": account_name,
+            "narration": narration,
+            "currency": "NGN"
+        }
+        return await self._request("POST", f"/v2/transfers/bank/{self.sub_account_id}", json_data=payload)
+
     # --- RECONCILIATION ---
 
     async def fetch_transaction_status(self, order_reference: str) -> dict:

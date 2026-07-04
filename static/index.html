@@ -22,6 +22,8 @@
                 <a href="#" data-view="plans">Plans</a>
                 <a href="#" data-view="customers">Customers</a>
                 <a href="#" data-view="simulator">Checkout Simulator</a>
+                <a href="#" data-view="transactions">Transactions</a>
+                <a href="#" data-view="payouts">Payouts</a>
             </nav>
             <div class="tenant-status" id="tenantStatus">
                 <span class="status-indicator yellow"></span> Not Configured
@@ -55,6 +57,10 @@
                         <div class="stat-card">
                             <h3>Pending Renewals</h3>
                             <p class="value" id="pendingRenewals">0</p>
+                        </div>
+                        <div class="stat-card" style="border-color: rgba(16,185,129,0.3);">
+                            <h3>Account Balance</h3>
+                            <p class="value" id="accountBalance" style="color:#10b981;">—</p>
                         </div>
                     </div>
                     <div class="charts-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 16px;">
@@ -176,8 +182,10 @@
                                 <input type="text" id="mandateAccountNumber" placeholder="0123456789" maxlength="10" required>
                             </div>
                             <div class="form-group">
-                                <label>Bank Code</label>
-                                <input type="text" id="mandateBankCode" placeholder="e.g. 044 (Access), 058 (GTB), 011 (First Bank)" required>
+                                <label>Bank</label>
+                                <select id="mandateBankCode" required>
+                                    <option value="">Loading banks...</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Phone Number</label>
@@ -222,6 +230,79 @@
                                 <img id="checkoutQR" src="" alt="Checkout QR" width="140" height="140" style="border-radius:8px;border:3px solid rgba(16,185,129,0.3);">
                             </div>
                         </div>
+                    </div>
+                </div>
+                <!-- Transactions View -->
+                <div class="view" id="view-transactions">
+                    <div class="card">
+                        <div class="flex-between" style="margin-bottom:16px;">
+                            <h3 style="margin-bottom:0;">Transaction Ledger</h3>
+                            <button id="refreshTxBtn" class="btn" style="padding:6px 12px;font-size:13px;">↻ Refresh</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Amount</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="txTableBody">
+                                    <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+                            <button id="txPrevBtn" class="btn" style="padding:6px 16px;">← Prev</button>
+                            <span id="txPageLabel" style="line-height:32px;color:#94a3b8;font-size:13px;">Page 1</span>
+                            <button id="txNextBtn" class="btn" style="padding:6px 16px;">Next →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payouts View -->
+                <div class="view" id="view-payouts">
+                    <div class="card">
+                        <h3>Send Payout</h3>
+                        <p class="text-muted" style="font-size:14px;margin-bottom:16px;">Transfer collected funds from your Nomba sub-account to any Nigerian bank account.</p>
+                        <form id="payoutForm">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div class="form-group">
+                                    <label>Destination Bank</label>
+                                    <select id="payoutBankCode" required>
+                                        <option value="">Loading banks...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Account Number</label>
+                                    <input type="text" id="payoutAccountNumber" placeholder="0123456789" maxlength="10" required>
+                                </div>
+                            </div>
+                            <div class="form-group" style="display:flex;gap:8px;align-items:flex-end;">
+                                <div style="flex:1;">
+                                    <label>Account Name</label>
+                                    <input type="text" id="payoutAccountName" placeholder="Click Verify →" readonly required style="background:rgba(255,255,255,0.04);">
+                                </div>
+                                <button type="button" id="verifyAccountBtn" class="btn" style="padding:10px 16px;white-space:nowrap;margin-bottom:0;">Verify</button>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₦)</label>
+                                <input type="number" id="payoutAmount" placeholder="5000" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Narration</label>
+                                <input type="text" id="payoutNarration" placeholder="NombaRecur Payout" value="NombaRecur Payout">
+                            </div>
+                            <button type="submit" class="btn primary" id="sendPayoutBtn" disabled>Send Payout</button>
+                        </form>
+                    </div>
+                    <div class="card mt-2">
+                        <h3>Payout History</h3>
+                        <div id="payoutHistoryList" class="flex-list"><p class="text-muted">Payouts will appear here after they are sent.</p></div>
                     </div>
                 </div>
             </div>
