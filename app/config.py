@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     smtp_password: str = "placeholder-smtp-password"
     smtp_from_name: str = "NombaRecur Billing"
 
+    # Base URL for webhook callbacks (used as fallback when tenant has no webhook_url set).
+    # Set APP_BASE_URL in Vercel env vars to your deployment URL, e.g. https://nomba-recur.vercel.app
+    app_base_url: str = "https://nomba-recur.vercel.app"
+
     # Email (Sendbyte)
     sendbyte_api_key: str = ""
 

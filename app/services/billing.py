@@ -54,12 +54,13 @@ async def process_subscription_renewal(session: Session, subscription_id: str):
         attempt = _create_billing_attempt(session, subscription, tenant, amount_kobo, "card")
         try:
             # We must pass the exact callback_url the tenant has configured
-            callback_url = tenant.webhook_url or "https://nomba-recur.outray.app/v1/webhooks/nomba"
+            callback_url = tenant.webhook_url or f"{settings.app_base_url}/v1/webhooks/nomba"
             
             # Note: Nomba tokenized card payment returns success immediately in sandbox for valid tokens, 
             # or triggers webhook? Docs say it returns {"status": True, "message": "Approved"}
+            from app.utils.crypto import decrypt_val
             res = await nomba.charge_tokenized_card(
-                token_key=customer.nomba_token_key_enc,
+                token_key=decrypt_val(customer.nomba_token_key_enc),
                 order_reference=attempt.merchant_tx_ref,
                 amount_kobo=amount_kobo,
                 customer_email=customer.email,
@@ -68,9 +69,14 @@ async def process_subscription_renewal(session: Session, subscription_id: str):
             )
             
             # If successful synchronously (docs imply this for tokenized cards)
-            if res.get("status") == True:
+            status_val = res.get("status")
+            if status_val == True or (isinstance(status_val, str) and status_val.lower() in ("success", "approved", "successful")):
                 _mark_attempt_success(session, attempt, subscription, plan)
                 return
+            else:
+                # Synchronous failure
+                logger.warning(f"Rail 1 returned non-success status: {status_val}")
+                _mark_attempt_failed(session, attempt, "FAILED", f"Status: {status_val}")
         except NombaAPIError as e:
             logger.warning(f"Rail 1 failed for {subscription_id}: {e}")
             _mark_attempt_failed(session, attempt, e.code, e.description)
@@ -125,7 +131,7 @@ async def process_subscription_renewal(session: Session, subscription_id: str):
 
     attempt = _create_billing_attempt(session, subscription, tenant, amount_kobo, "checkout_dunning")
     try:
-        callback_url = tenant.webhook_url or "https://nomba-recur.outray.app/v1/webhooks/nomba"
+        callback_url = tenant.webhook_url or f"{settings.app_base_url}/v1/webhooks/nomba"
         res = await nomba.create_checkout_order(
             order_reference=attempt.merchant_tx_ref,
             amount_kobo=amount_kobo,
