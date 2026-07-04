@@ -14,7 +14,7 @@ def _send(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
     }
     payload = {
         "to": to_email,
-        "from": "notifications@nombarecur.com",
+        "from": settings.email_from,
         "subject": subject,
         "html": html_body,
         "text": text_body

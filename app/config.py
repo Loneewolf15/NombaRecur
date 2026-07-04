@@ -32,6 +32,9 @@ class Settings(BaseSettings):
 
     # Email (Sendbyte)
     sendbyte_api_key: str = ""
+    # Sender address — must be a domain verified in your Sendbyte account.
+    # For the hackathon, set this to an email on a domain you own/verified.
+    email_from: str = "notifications@nombarecur.com"
 
     @property
     def is_production(self) -> bool:
