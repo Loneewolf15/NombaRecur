@@ -67,6 +67,38 @@ def send_dunning_email(customer_email: str, customer_name: str, checkout_link: s
     return _send(customer_email, subject, html_body, text_body)
 
 
+def send_payment_failed_email(customer_email: str, customer_name: str, amount_naira: str, plan_name: str) -> bool:
+    """
+    Sent when a payment attempt is definitively declined (not a soft dunning —
+    this fires when the subscription is canceled due to max retries being exhausted,
+    or when Nomba returns an explicit decline with no further fallback available).
+    """
+    subject = f"Your {plan_name} subscription has been canceled"
+    display_name = customer_name or customer_email
+
+    html_body = f"""
+    <html><body style="font-family: sans-serif; color: #333;">
+      <h2 style="color: #c0392b;">Subscription Canceled</h2>
+      <p>Hi {display_name},</p>
+      <p>Unfortunately we were unable to collect payment of <strong>₦{amount_naira}</strong>
+         for your <strong>{plan_name}</strong> subscription after multiple attempts,
+         so the subscription has been canceled.</p>
+      <p>If you'd like to re-subscribe, please contact us or sign up again through the platform.</p>
+      <p style="color:#888;font-size:12px;">We're sorry for the inconvenience.</p>
+    </body></html>
+    """
+
+    text_body = (
+        f"Hi {display_name},\n\n"
+        f"We were unable to collect ₦{amount_naira} for your {plan_name} subscription "
+        f"after multiple attempts, so it has been canceled.\n\n"
+        f"Please re-subscribe if you'd like to continue.\n\n"
+        f"— NombaRecur Billing"
+    )
+
+    return _send(customer_email, subject, html_body, text_body)
+
+
 def send_payment_success_email(customer_email: str, customer_name: str, amount_naira: str, plan_name: str, next_billing_date: str) -> bool:
     """
     Sent when a payment (any rail) is confirmed via webhook.

@@ -315,3 +315,128 @@ th {
     justify-content: space-between;
     align-items: center;
 }
+
+/* ------------------------------------------------------------------ */
+/* Onboarding Tour                                                      */
+/* ------------------------------------------------------------------ */
+
+/* Semi-transparent full-screen dimmer; pointer-events off so the     */
+/* highlighted element remains interactive during the tour.            */
+.tour-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 490;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+
+/* Anything the tour wants to spotlight sits above the dimmer.         */
+/* JS temporarily sets position:relative + this class on the element   */
+/* and, when needed, on its closest positioned ancestor (e.g. sidebar).*/
+.tour-highlighted {
+    position: relative !important;
+    z-index: 510 !important;
+    border-radius: 8px;
+    box-shadow: 0 0 0 3px #3b82f6, 0 0 0 7px rgba(59, 130, 246, 0.25),
+                0 0 28px rgba(59, 130, 246, 0.18) !important;
+    transition: box-shadow 0.25s;
+}
+
+/* Floating tooltip card */
+.tour-card {
+    position: fixed;
+    z-index: 520;
+    width: 300px;
+    background: #1e293b;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    border-radius: 12px;
+    padding: 22px 24px 18px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+    transition: top 0.22s ease, left 0.22s ease, transform 0.22s ease;
+}
+
+.tour-badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #3b82f6;
+    margin-bottom: 6px;
+}
+
+.tour-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 8px;
+}
+
+.tour-card p {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.65;
+    margin-bottom: 18px;
+}
+
+/* Progress dots */
+.tour-dots {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 16px;
+}
+
+.tour-dot {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    transition: width 0.2s, background 0.2s;
+    width: 5px;
+}
+.tour-dot.active {
+    width: 16px;
+    background: #3b82f6;
+}
+
+/* Controls row */
+.tour-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tour-btn {
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+.tour-btn.prev {
+    background: rgba(255, 255, 255, 0.07);
+    color: #cbd5e1;
+}
+.tour-btn.prev:hover { background: rgba(255,255,255,0.12); }
+
+.tour-btn.next {
+    background: #3b82f6;
+    color: #fff;
+}
+.tour-btn.next:hover { background: #2563eb; }
+
+.tour-skip {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #475569;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+.tour-skip:hover { color: #94a3b8; }

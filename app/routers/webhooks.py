@@ -13,7 +13,6 @@ from app.models.billing_attempt import BillingAttempt
 from app.models.subscription import Subscription
 from app.models.plan import Plan
 from app.services.billing import _mark_attempt_success
-from app.services.email import send_payment_success_email
 
 logger = logging.getLogger(__name__)
 
@@ -215,20 +214,7 @@ async def _handle_payment_success(data: dict, session: Session):
                 
         session.commit()
         logger.info(f"Successfully processed webhook for subscription {subscription.id}")
-
-        # Send payment confirmation email
-        from app.models.customer import Customer
-        customer = session.get(Customer, subscription.customer_id)
-        if customer:
-            amount_naira = f"{attempt.amount_kobo / 100:,.2f}"
-            next_billing_date = subscription.next_billing_at.strftime("%d %b %Y")
-            send_payment_success_email(
-                customer_email=customer.email,
-                customer_name=customer.name,
-                amount_naira=amount_naira,
-                plan_name=plan.name,
-                next_billing_date=next_billing_date,
-            )
+        # Success email is now sent inside _mark_attempt_success, so no duplicate call here.
     else:
         logger.error(f"Missing subscription or plan for attempt {attempt.id}")
 
@@ -300,15 +286,5 @@ async def _handle_va_credit(data: dict, session: Session):
     session.commit()
 
     _mark_attempt_success(session, attempt, subscription, plan)
-
-    from app.services.email import send_payment_success_email
-    amount_naira_fmt = f"{plan.amount_kobo / 100:,.2f}"
-    next_billing_date = subscription.next_billing_at.strftime("%d %b %Y")
-    send_payment_success_email(
-        customer_email=customer.email,
-        customer_name=customer.name,
-        amount_naira=amount_naira_fmt,
-        plan_name=plan.name,
-        next_billing_date=next_billing_date,
-    )
+    # Success email is sent inside _mark_attempt_success.
     logger.info(f"VA credit auto-renewed subscription {subscription.id} for customer {customer.id}")

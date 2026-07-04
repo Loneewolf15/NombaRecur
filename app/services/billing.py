@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 import logging
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from app.models.tenant import Tenant
 from app.models.subscription import Subscription
 from app.models.plan import Plan
 from app.models.customer import Customer
 from app.models.billing_attempt import BillingAttempt
 from app.services.nomba import NombaClient, NombaAPIError
-from app.services.email import send_dunning_email
+from app.services.email import send_dunning_email, send_payment_success_email, send_payment_failed_email
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -122,6 +122,17 @@ async def process_subscription_renewal(session: Session, subscription_id: str):
         subscription.canceled_at = datetime.utcnow()
         session.add(subscription)
         session.commit()
+        # Notify the customer that their subscription has been canceled
+        try:
+            amount_naira = f"{plan.amount_kobo / 100:,.2f}"
+            send_payment_failed_email(
+                customer_email=customer.email,
+                customer_name=customer.name,
+                amount_naira=amount_naira,
+                plan_name=plan.name,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send cancellation email for subscription {subscription_id}: {e}")
         return
 
     logger.info(f"Attempting Rail 3 (Virtual Account Dunning) for {subscription_id}")
@@ -171,9 +182,19 @@ async def process_subscription_renewal(session: Session, subscription_id: str):
 def _create_billing_attempt(session: Session, subscription: Subscription, tenant: Tenant, amount_kobo: int, rail: str) -> BillingAttempt:
     period_start_str = subscription.current_period_start.strftime("%Y%m%d")
     short_id = subscription.id[:8]
-    attempt_num = subscription.retry_count + 1
-    
-    merchant_tx_ref = f"nr_{short_id}_{period_start_str}_{attempt_num}"
+    prefix = f"nr_{short_id}_{period_start_str}_"
+
+    # Count how many attempts already exist for this period to avoid collisions
+    # when retry_count has been reset by a prior successful _mark_attempt_success.
+    existing_count = session.exec(
+        select(func.count(BillingAttempt.id)).where(
+            BillingAttempt.subscription_id == subscription.id,
+            BillingAttempt.merchant_tx_ref.startswith(prefix)
+        )
+    ).one()
+    attempt_num = existing_count + 1
+
+    merchant_tx_ref = f"{prefix}{attempt_num}"
     
     attempt = BillingAttempt(
         subscription_id=subscription.id,
@@ -195,11 +216,11 @@ def _mark_attempt_success(session: Session, attempt: BillingAttempt, subscriptio
     attempt.status = "success"
     attempt.completed_at = datetime.utcnow()
     session.add(attempt)
-    
+
     subscription.status = "active"
     subscription.retry_count = 0
     subscription.current_period_start = datetime.utcnow()
-    
+
     # Calculate next billing
     if plan.interval == "monthly":
         subscription.current_period_end = subscription.current_period_start + timedelta(days=30)
@@ -218,12 +239,34 @@ def _mark_attempt_success(session: Session, attempt: BillingAttempt, subscriptio
     else:
         # fallback
         subscription.current_period_end = subscription.current_period_start + timedelta(days=30)
-        
+
     subscription.next_billing_at = subscription.current_period_end
     session.add(subscription)
-    
+
     session.commit()
     logger.info(f"Subscription {subscription.id} renewed successfully.")
+
+    # Send payment confirmation to the customer.
+    # This is the single source of truth for "payment succeeded" — covers Rail 1
+    # (card token), Rail 2 (direct debit), scheduler reconciliation, and webhook
+    # paths alike. The webhook handler previously did this itself; it will now hit
+    # the idempotency guard (attempt.status == "success" already set) before it
+    # can call _mark_attempt_success a second time, so no duplicate emails.
+    try:
+        customer = session.get(Customer, subscription.customer_id)
+        if customer:
+            amount_naira = f"{attempt.amount_kobo / 100:,.2f}"
+            next_billing_date = subscription.next_billing_at.strftime("%d %b %Y")
+            send_payment_success_email(
+                customer_email=customer.email,
+                customer_name=customer.name,
+                amount_naira=amount_naira,
+                plan_name=plan.name,
+                next_billing_date=next_billing_date,
+            )
+    except Exception as e:
+        # Never let an email failure roll back a successful payment
+        logger.warning(f"Failed to send payment success email for subscription {subscription.id}: {e}")
 
 def _mark_attempt_failed(session: Session, attempt: BillingAttempt, code: str, msg: str):
     attempt.status = "failed"

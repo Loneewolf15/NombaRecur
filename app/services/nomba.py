@@ -175,7 +175,9 @@ class NombaClient:
     # --- RAIL 2: VIRTUAL ACCOUNT ---
 
     async def create_virtual_account(self, account_ref: str, account_name: str) -> dict:
-        # Correct path per Nomba docs: POST /v1/accounts/virtual/{subAccountId}
+        # Hackathon requirement: VAs must be created under the sub-account.
+        # The 2-VA sandbox limit is lifted on the production endpoint — configure
+        # the tenant with production credentials and env="production" to use this.
         if not self.sub_account_id:
             raise ValueError("sub_account_id is required to create a Virtual Account")
         payload = {

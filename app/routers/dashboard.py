@@ -189,8 +189,11 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
                 plan = session.get(Plan, subscription.plan_id)
                 _mark_attempt_success(session, attempt, subscription, plan)
                 results["success"] += 1
+            elif status_msg in ("pending", "created", "abandoned", "new"):
+                # Still unpaid on Nomba's end, leave it pending so the user can still pay it!
+                pass
             else:
-                # Nomba confirmed the payment is not yet successful — mark failed
+                # Nomba confirmed the payment is explicitly failed
                 attempt.status = "failed"
                 attempt.error_code = response_code or "NOT_PAID"
                 attempt.error_message = f"Reconciled: status={status_msg}, code={response_code}"

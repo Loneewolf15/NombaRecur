@@ -33,7 +33,10 @@
             <!-- Topbar -->
             <header class="topbar">
                 <h1 id="pageTitle">Dashboard</h1>
-                <button id="setupBtn" class="btn primary">Setup API Keys</button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="tourBtn" class="btn" style="padding:8px 14px;font-size:13px;background:rgba(255,255,255,0.06);color:#94a3b8;" title="Replay the getting-started tour">🗺 Tour</button>
+                    <button id="setupBtn" class="btn primary">Setup API Keys</button>
+                </div>
             </header>
 
             <!-- Views -->
@@ -222,8 +225,8 @@
                 <div class="form-group">
                     <label>Environment</label>
                     <select id="nombaEnv">
-                        <option value="sandbox">Sandbox (Testing)</option>
-                        <option value="production">Production (Live)</option>
+                        <option value="sandbox">Sandbox (Testing) — sandbox.nomba.com</option>
+                        <option value="production">Production (Live) — api.nomba.com · unlimited VAs</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -257,6 +260,10 @@
             </div>
         </div>
     </div>
+
+    <!-- Onboarding Tour -->
+    <div id="tourOverlay" class="tour-overlay" style="display:none;"></div>
+    <div id="tourCard" class="tour-card" style="display:none;"></div>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">

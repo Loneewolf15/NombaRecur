@@ -34,12 +34,14 @@ def _provision_va_background(customer_id: str, tenant_id: str):
             if not customer or not tenant:
                 return
             try:
+                import time
                 nomba = NombaClient(tenant, session)
                 va = await nomba.create_virtual_account(
-                    account_ref=f"cust_{customer.id[:8]}",
+                    account_ref=f"cust_{customer.id[:8]}_{int(time.time())}",
                     account_name=customer.name or customer.email
                 )
-                customer.va_account_number = va.get("accountNumber")
+                # Nomba returns "bankAccountNumber" (not "accountNumber") for VA creation
+                customer.va_account_number = va.get("bankAccountNumber")
                 customer.va_account_ref = va.get("accountRef")
                 session.add(customer)
                 session.commit()

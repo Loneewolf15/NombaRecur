@@ -37,6 +37,12 @@ async def run_billing_cycle(tenant_id: str = None):
                 processed += 1
             except Exception as e:
                 logger.error(f"Error processing subscription {sub.id}: {e}")
+                # Roll back any failed transaction so the session stays usable
+                # for the next subscription in the loop.
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
         return processed
 
 async def run_crash_recovery():
