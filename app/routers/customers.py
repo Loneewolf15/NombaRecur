@@ -46,9 +46,10 @@ def _provision_va_background(customer_id: str, tenant_id: str):
                     account_ref=f"cust_{customer.id[:8]}_{int(time.time())}",
                     account_name=customer.name or customer.email
                 )
-                # Nomba returns "bankAccountNumber" (not "accountNumber") for VA creation
-                customer.va_account_number = va.get("bankAccountNumber")
-                customer.va_account_ref = va.get("accountRef")
+                logger.info(f"Nomba VA API Response for customer {customer_id}: {va}")
+                # Nomba returns the data inside a 'data' wrapper
+                customer.va_account_number = va.get("data", {}).get("bankAccountNumber") or va.get("bankAccountNumber")
+                customer.va_account_ref = va.get("data", {}).get("accountRef") or va.get("accountRef")
                 session.add(customer)
                 session.commit()
                 logger.info(f"VA provisioned for customer {customer_id}: {customer.va_account_number}")

@@ -440,3 +440,69 @@ th {
     transition: color 0.15s;
 }
 .tour-skip:hover { color: #94a3b8; }
+
+/* ------------------------------------------------------------------ */
+/* Mobile Responsiveness                                              */
+/* ------------------------------------------------------------------ */
+@media (max-width: 768px) {
+    #app {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        padding: 16px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .brand {
+        margin-bottom: 0;
+    }
+    
+    .sidebar nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        margin-top: 16px;
+    }
+    
+    .tenant-status {
+        width: 100%;
+        margin-top: 16px;
+        justify-content: center;
+    }
+    
+    .content {
+        padding: 16px;
+    }
+    
+    .charts-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .flex-between {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .modal-content {
+        padding: 24px;
+        margin: 16px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .form-group[style*="display:grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
