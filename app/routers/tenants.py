@@ -36,15 +36,15 @@ def register_tenant(data: TenantCreate, session: Session = Depends(get_session))
     """
     from sqlmodel import select
 
+    env = data.env if data.env in _ENV_URLS else "sandbox"
+    base_url = _ENV_URLS[env]
+    raw_secret = secrets.token_urlsafe(32)
+
     # Isolate by (email, env): sandbox and production are separate tenants so their
     # subscriptions, customers, and billing history never bleed into each other.
     existing = session.exec(
         select(Tenant).where(Tenant.email == data.email, Tenant.env == env)
     ).first()
-    raw_secret = secrets.token_urlsafe(32)
-
-    env = data.env if data.env in _ENV_URLS else "sandbox"
-    base_url = _ENV_URLS[env]
 
     if existing:
         existing.api_key_hash = bcrypt.hashpw(raw_secret.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
