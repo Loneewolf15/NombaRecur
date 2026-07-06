@@ -535,6 +535,27 @@ window.deleteCustomer = async function(id) {
     }
 };
 
+window.retryVA = async function(id) {
+    try {
+        showLoading();
+        const res = await fetch(`${API_BASE}/v1/customers/${id}/provision-va`, {
+            method: "POST",
+            headers: { "X-API-Key": apiKey }
+        });
+        const data = await res.json();
+        hideLoading();
+        if (data.va_account_number) {
+            showMessage("Success", `Virtual Account provisioned: ${data.va_account_number}`);
+        } else {
+            showMessage("Requery Started", "VA provisioning is running in the background. Refresh customers in a moment.");
+        }
+        setTimeout(() => loadData(), 3000);
+    } catch (err) {
+        hideLoading();
+        showMessage("Error", "VA requery failed. Please try again.", true);
+    }
+};
+
 // Import CSV
 document.getElementById("importCsvBtn").addEventListener("click", async () => {
     const fileInput = document.getElementById("csvFileInput");
@@ -699,7 +720,8 @@ function renderCustomers() {
                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(c.va_account_number)}&format=png"
                       width="120" height="120" style="border-radius:6px;border:2px solid rgba(96,165,250,0.3);">
                </div>`
-            : `<span style="color:#64748b; font-style:italic;">VA: provisioning...</span>`;
+            : `<span style="color:#64748b; font-style:italic;">VA: Not provisioned</span>
+               <button class="btn" onclick="retryVA('${c.id}')" style="padding:2px 8px;font-size:11px;margin-left:8px;background:rgba(245,158,11,0.12);color:#f59e0b;">Requery VA</button>`;
         const mandateBadge = c.mandate_id
             ? `<span style="color:#10b981;font-size:11px;margin-left:8px;">&#9679; Direct Debit enrolled</span>`
             : '';
