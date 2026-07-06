@@ -126,7 +126,16 @@ async function pollForVA(customerId, customerName, attemptsLeft = 3) {
     pollForVA(customerId, customerName, attemptsLeft - 1);
 }
 
-// Navigation
+// Mobile Sidebar Toggle
+document.getElementById("menuBtn")?.addEventListener("click", () => {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebarOverlay").classList.add("open");
+});
+document.getElementById("sidebarOverlay")?.addEventListener("click", () => {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebarOverlay").classList.remove("open");
+});
+
 navLinks.forEach(link => {
     link.addEventListener("click", (e) => {
         e.preventDefault();
@@ -138,6 +147,12 @@ navLinks.forEach(link => {
 
         views.forEach(v => v.classList.remove("active"));
         document.getElementById(`view-${viewId}`).classList.add("active");
+        
+        // Close sidebar on mobile after clicking a link
+        if (window.innerWidth <= 768) {
+            document.getElementById("sidebar").classList.remove("open");
+            document.getElementById("sidebarOverlay").classList.remove("open");
+        }
     });
 });
 

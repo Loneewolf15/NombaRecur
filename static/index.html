@@ -10,8 +10,11 @@
 </head>
 <body>
     <div id="app">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="brand">
                 <div class="logo"></div>
                 <h2>NombaRecur</h2>
@@ -34,7 +37,10 @@
         <main class="content">
             <!-- Topbar -->
             <header class="topbar">
-                <h1 id="pageTitle">Dashboard</h1>
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <button id="menuBtn" class="btn" style="padding: 8px; display: none; background: transparent; border: none; font-size: 20px; cursor: pointer;">☰</button>
+                    <h1 id="pageTitle" style="margin: 0;">Dashboard</h1>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <button id="tourBtn" class="btn" style="padding:8px 14px;font-size:13px;background:rgba(255,255,255,0.06);color:#94a3b8;" title="Replay the getting-started tour">🗺 Tour</button>
                     <button id="setupBtn" class="btn primary">Setup API Keys</button>
