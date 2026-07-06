@@ -703,6 +703,17 @@ document.getElementById("simulateForm").addEventListener("submit", async (e) => 
             document.getElementById("invDate").innerText = new Date().toLocaleDateString();
             document.getElementById("invPayBtn").href = data.checkout_link;
             
+            // Check for customer VA
+            const customerObj = customers.find(c => c.id === customerId);
+            const vaBox = document.getElementById("invVaBox");
+            if (customerObj && customerObj.va_account_number) {
+                document.getElementById("invVaBank").innerText = customerObj.va_bank_name || "Nomba MFB";
+                document.getElementById("invVaNumber").innerText = customerObj.va_account_number;
+                vaBox.classList.remove("hidden");
+            } else {
+                vaBox.classList.add("hidden");
+            }
+            
             const qrImg = document.getElementById("checkoutQR");
             qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(data.checkout_link)}&format=png`;
             

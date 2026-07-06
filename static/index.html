@@ -270,13 +270,21 @@
                                 </tbody>
                             </table>
                             
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                                <div>
-                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;">Scan to pay instantly:</p>
-                                    <img id="checkoutQR" src="" alt="Checkout QR" width="100" height="100" style="border-radius:4px;border:1px solid #e2e8f0;">
+                            <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 16px;">
+                                <!-- VA Transfer Option -->
+                                <div id="invVaBox" class="hidden" style="flex: 1; background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
+                                    <p style="margin: 0 0 12px; font-size: 13px; color: #475569; font-weight: 500;">Option 1: Bank Transfer</p>
+                                    <p style="font-size: 12px; color: #64748b; margin: 0 0 4px;">Bank Name</p>
+                                    <p id="invVaBank" style="font-size: 15px; font-weight: 600; color: #0f172a; margin: 0 0 12px;"></p>
+                                    <p style="font-size: 12px; color: #64748b; margin: 0 0 4px;">Account Number</p>
+                                    <p id="invVaNumber" style="font-size: 20px; font-weight: 700; color: #1e40af; margin: 0; letter-spacing: 2px;"></p>
                                 </div>
-                                <div style="text-align: right;">
-                                    <a id="invPayBtn" href="#" target="_blank" class="btn primary" style="padding: 10px 20px;">Pay Now →</a>
+                                
+                                <!-- Card Checkout Option -->
+                                <div style="flex: 1; background: #fff; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                                    <p style="margin: 0 0 12px; font-size: 13px; color: #475569; font-weight: 500;">Option 2: Pay with Card</p>
+                                    <img id="checkoutQR" src="" alt="Checkout QR" width="80" height="80" style="border-radius:4px;border:1px solid #e2e8f0; margin: 0 auto 12px;">
+                                    <a id="invPayBtn" href="#" target="_blank" class="btn primary" style="padding: 8px 16px; width: 100%;">Pay Now →</a>
                                 </div>
                             </div>
                         </div>
