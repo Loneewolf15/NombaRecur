@@ -5,6 +5,7 @@ from sqlmodel import Session
 from app.models.tenant import Tenant
 from app.utils.crypto import decrypt_val, encrypt_val
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +200,7 @@ class NombaClient:
             "narration": "Subscription mandate",
             "customerPhoneNumber": customer_phone,
             "merchantReference": merchant_reference,
-            "startDate": datetime.utcnow().strftime("%Y-%m-%dT%H:%M"),
+            "startDate": (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M"),
             "endDate": (datetime.utcnow() + timedelta(days=3650)).strftime("%Y-%m-%dT%H:%M"),
             "customerEmail": customer_email,
             "startImmediately": True
@@ -263,7 +264,8 @@ class NombaClient:
             "bankCode": bank_code,
             "accountName": account_name,
             "narration": narration,
-            "currency": "NGN"
+            "currency": "NGN",
+            "merchantTxRef": str(uuid.uuid4())
         }
         return await self._request("POST", f"/v2/transfers/bank/{self.sub_account_id}", json_data=payload)
 

@@ -92,9 +92,16 @@ async def nomba_callback_get(orderId: str = None, orderReference: str = None, se
                     
                     # Synthesize the webhook data structure so we can reuse our logic
                     txn_data["merchantTxRef"] = orderReference
+                    
+                    # Ensure tokenKey can be found if it's returned by fetch_transaction_status
+                    tokenized_data = txn_data.get("tokenizedCardData") or txn_data.get("tokenizedCard") or {}
+                    if not tokenized_data and "tokenKey" in txn_data:
+                        tokenized_data = {"tokenKey": txn_data.get("tokenKey")}
+                        
                     webhook_data = {
                         "data": {
-                            "transaction": txn_data
+                            "transaction": txn_data,
+                            "tokenizedCardData": tokenized_data
                         }
                     }
                     await _handle_payment_success(webhook_data, session)

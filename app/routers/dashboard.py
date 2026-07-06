@@ -257,6 +257,12 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
     
     nomba = NombaClient(tenant, session)
     for attempt in pending_attempts:
+        # VA credit and direct debit attempts are settled via webhook, not checkout orders.
+        # The checkout transaction endpoint only knows about orderReferences — querying it
+        # for a VA/mandate ref returns "not found" which would falsely fail the attempt.
+        if attempt.rail in ("virtual_account", "mandate"):
+            logger.info(f"Skipping reconcile for {attempt.rail} attempt {attempt.merchant_tx_ref}")
+            continue
         try:
             res = await nomba.fetch_transaction_status(attempt.merchant_tx_ref)
 

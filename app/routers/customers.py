@@ -185,9 +185,29 @@ def enroll_direct_debit(
 @router.delete("/{customer_id}")
 def delete_customer(customer_id: str, session: Session = Depends(get_session), tenant: Tenant = Depends(get_current_tenant)):
     from fastapi import HTTPException
+    from app.models.subscription import Subscription
+    from app.models.billing_attempt import BillingAttempt
+
     customer = session.get(Customer, customer_id)
     if not customer or customer.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Customer not found")
+        
+    # Delete associated subscriptions and their billing attempts first 
+    # to avoid PostgreSQL foreign key constraint violations
+    subscriptions = session.exec(select(Subscription).where(Subscription.customer_id == customer_id)).all()
+    for sub in subscriptions:
+        attempts = session.exec(select(BillingAttempt).where(BillingAttempt.subscription_id == sub.id)).all()
+        for attempt in attempts:
+            session.delete(attempt)
+        session.delete(sub)
+        
     session.delete(customer)
-    session.commit()
+    
+    try:
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to delete customer {customer_id}: {e}")
+        raise HTTPException(status_code=400, detail="Failed to delete customer due to constraint violation")
+        
     return {"message": "Customer deleted successfully"}

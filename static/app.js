@@ -474,8 +474,10 @@ window.deletePlan = async function(id) {
 // Create Customer
 document.getElementById("createCustomerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("customerEmail").value;
-    const extId = document.getElementById("customerExtId").value;
+    const name = document.getElementById("customerName").value.trim();
+    const email = document.getElementById("customerEmail").value.trim();
+    const phone = document.getElementById("customerPhone").value.trim();
+    const extId = document.getElementById("customerExtId").value.trim();
 
     try {
         showLoading();
@@ -485,7 +487,7 @@ document.getElementById("createCustomerForm").addEventListener("submit", async (
                 "Content-Type": "application/json",
                 "X-API-Key": apiKey
             },
-            body: JSON.stringify({ email, external_id: extId })
+            body: JSON.stringify({ name, email, phone: phone || undefined, external_id: extId })
         });
         const data = await res.json();
         hideLoading();
@@ -704,8 +706,8 @@ function renderCustomers() {
         return `
         <div class="list-item flex-between">
             <div>
-                <strong>${c.email}</strong> (Ext: ${c.external_id})${mandateBadge}
-                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">ID: ${c.id}</div>
+                <strong>${c.name || c.email}</strong>${c.name ? ` <span style="color:#94a3b8;font-size:12px;">&lt;${c.email}&gt;</span>` : ''}${mandateBadge}
+                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Ext: ${c.external_id} · ID: ${c.id}</div>
                 <div style="font-size:12px; margin-top:4px;">${vaSection}</div>
             </div>
             <button class="btn btn-danger" onclick="deleteCustomer('${c.id}')">Delete</button>
