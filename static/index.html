@@ -226,16 +226,58 @@
                         </form>
                     </div>
                     
-                    <div id="checkoutResult" class="card mt-2 hidden" style="border: 1px solid #10b981; background: rgba(16, 185, 129, 0.05);">
-                        <h3 style="color: #10b981;">Checkout Generated!</h3>
-                        <p>Click below to open Nomba's hosted sandbox checkout. Use OTP <strong>9999</strong> to simulate success.</p>
-                        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+                    <div id="checkoutResult" class="card mt-2 hidden" style="border: 1px solid #10b981; background: #ffffff;">
+                        <div class="flex-between" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;">
+                            <h3 style="color: #10b981; margin: 0;">Checkout Generated!</h3>
                             <div>
+                                <button id="viewInvoiceBtn" class="btn" style="background: #f1f5f9; color: #334155; margin-right: 8px;">📄 View Invoice</button>
                                 <a id="checkoutLinkBtn" href="#" target="_blank" class="btn" style="background: #10b981; color: white;">Open Checkout ↗</a>
-                                <p style="font-size:12px;color:#64748b;margin-top:8px;">Or scan the QR code to open on mobile</p>
                             </div>
-                            <div style="text-align:center;">
-                                <img id="checkoutQR" src="" alt="Checkout QR" width="140" height="140" style="border-radius:8px;border:3px solid rgba(16,185,129,0.3);">
+                        </div>
+                        <p class="text-muted" style="margin-bottom: 20px;">Use OTP <strong>9999</strong> to simulate a successful payment in the sandbox checkout.</p>
+                        
+                        <!-- Invoice Template -->
+                        <div id="invoiceTemplate" class="hidden" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; max-width: 500px; margin: 0 auto; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <h2 style="margin: 0; color: #0f172a; font-size: 24px;">INVOICE</h2>
+                                <p style="color: #64748b; margin: 4px 0 0; font-size: 14px;">Subscription Payment Request</p>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 14px;">
+                                <div>
+                                    <p style="color: #64748b; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; font-weight: 600;">Billed To</p>
+                                    <p id="invCustomerName" style="margin: 0; font-weight: 600; color: #0f172a;">Customer Name</p>
+                                    <p id="invCustomerEmail" style="margin: 4px 0 0; color: #475569;">email@example.com</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <p style="color: #64748b; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; font-weight: 600;">Date</p>
+                                    <p id="invDate" style="margin: 0; color: #0f172a;"></p>
+                                </div>
+                            </div>
+                            
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #cbd5e1;">
+                                        <th style="text-align: left; padding: 8px 0; color: #475569;">Description</th>
+                                        <th style="text-align: right; padding: 8px 0; color: #475569;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td id="invPlanName" style="padding: 12px 0; color: #0f172a; font-weight: 500;">Plan Name</td>
+                                        <td id="invPlanAmount" style="padding: 12px 0; text-align: right; color: #0f172a; font-weight: 600;">₦0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                                <div>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;">Scan to pay instantly:</p>
+                                    <img id="checkoutQR" src="" alt="Checkout QR" width="100" height="100" style="border-radius:4px;border:1px solid #e2e8f0;">
+                                </div>
+                                <div style="text-align: right;">
+                                    <a id="invPayBtn" href="#" target="_blank" class="btn primary" style="padding: 10px 20px;">Pay Now →</a>
+                                </div>
                             </div>
                         </div>
                     </div>

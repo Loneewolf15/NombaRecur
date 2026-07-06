@@ -683,14 +683,46 @@ document.getElementById("simulateForm").addEventListener("submit", async (e) => 
         if (data.checkout_link) {
             document.getElementById("checkoutResult").classList.remove("hidden");
             document.getElementById("checkoutLinkBtn").href = data.checkout_link;
+            
+            // Populate Invoice View
+            const customerEl = document.getElementById("simCustomer");
+            const customerText = customerEl.options[customerEl.selectedIndex].text; // e.g. "Name <email@example.com>"
+            const nameMatch = customerText.match(/^(.*?) </);
+            const emailMatch = customerText.match(/<(.*?)>/);
+            
+            document.getElementById("invCustomerName").innerText = nameMatch ? nameMatch[1] : customerText;
+            document.getElementById("invCustomerEmail").innerText = emailMatch ? emailMatch[1] : "";
+            
+            const planEl = document.getElementById("simPlan");
+            const planText = planEl.options[planEl.selectedIndex].text; // e.g. "Daily (N100)"
+            const amountMatch = planText.match(/\((.*?)\)/);
+            const pNameMatch = planText.match(/^(.*?) \(/);
+            
+            document.getElementById("invPlanName").innerText = pNameMatch ? pNameMatch[1] : planText;
+            document.getElementById("invPlanAmount").innerText = amountMatch ? "₦" + amountMatch[1].replace('N','') : "₦0.00";
+            document.getElementById("invDate").innerText = new Date().toLocaleDateString();
+            document.getElementById("invPayBtn").href = data.checkout_link;
+            
             const qrImg = document.getElementById("checkoutQR");
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.checkout_link)}&format=png`;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(data.checkout_link)}&format=png`;
+            
+            // Hide invoice template by default on new generation
+            document.getElementById("invoiceTemplate").classList.add("hidden");
         } else {
             showMessage("Error", JSON.stringify(data), true);
         }
     } catch (err) {
         hideLoading();
         showMessage("Error", "Failed to generate checkout", true);
+    }
+});
+
+document.getElementById("viewInvoiceBtn")?.addEventListener("click", () => {
+    const inv = document.getElementById("invoiceTemplate");
+    if (inv.classList.contains("hidden")) {
+        inv.classList.remove("hidden");
+    } else {
+        inv.classList.add("hidden");
     }
 });
 
