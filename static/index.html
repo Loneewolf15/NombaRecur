@@ -191,8 +191,9 @@
                             </div>
                             <div class="form-group">
                                 <label>Bank</label>
-                                <input list="bankDatalist" id="mandateBankInput" placeholder="Type to search banks..." required autocomplete="off">
+                                <input list="mandateBankDatalist" id="mandateBankInput" placeholder="Commercial banks only (Access, GTB, Zenith…)" required autocomplete="off">
                                 <input type="hidden" id="mandateBankCode">
+                                <small style="color:#f59e0b;font-size:11px;">⚠ NIBSS only supports commercial banks — not MFBs (Kuda, OPay, Moniepoint, etc.)</small>
                             </div>
                             <div class="form-group">
                                 <label>Phone Number</label>
@@ -280,7 +281,7 @@
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                                 <div class="form-group">
                                     <label>Destination Bank</label>
-                                    <input list="bankDatalist" id="payoutBankInput" placeholder="Type to search banks..." required autocomplete="off">
+                                    <input list="payoutBankDatalist" id="payoutBankInput" placeholder="Type to search banks..." required autocomplete="off">
                                     <input type="hidden" id="payoutBankCode">
                                 </div>
                                 <div class="form-group">
@@ -388,8 +389,10 @@
         <div class="spinner"></div>
     </div>
 
-    <!-- Datalist for Banks -->
-    <datalist id="bankDatalist"></datalist>
+    <!-- Datalist for Payouts (all banks including MFBs) -->
+    <datalist id="payoutBankDatalist"></datalist>
+    <!-- Datalist for Mandate enrollment (commercial banks only — NIBSS requirement) -->
+    <datalist id="mandateBankDatalist"></datalist>
 
     <script src="/static/app.js"></script>
 </body>

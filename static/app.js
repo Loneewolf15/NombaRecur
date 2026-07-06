@@ -811,9 +811,26 @@ async function loadBanks() {
 
 function _populateBankDropdowns() {
     if (!banks.length) return;
-    const options = banks.map(b => `<option value="${b.bankName || b.name} - ${b.bankCode || b.code}"></option>`).join("");
-    const dl = document.getElementById("bankDatalist");
-    if (dl) dl.innerHTML = options;
+
+    // All banks — used for payouts (transfers support MFBs)
+    const allOptions = banks
+        .map(b => `<option value="${b.bankName || b.name} - ${b.bankCode || b.code}"></option>`)
+        .join("");
+
+    // Commercial banks only (3-digit CBN codes) — NIBSS mandates reject MFB 6-digit NIP codes
+    const commercialOptions = banks
+        .filter(b => {
+            const code = String(b.bankCode || b.code || "");
+            return code.length >= 3 && code.length <= 5;
+        })
+        .map(b => `<option value="${b.bankName || b.name} - ${b.bankCode || b.code}"></option>`)
+        .join("");
+
+    const payoutDl = document.getElementById("payoutBankDatalist");
+    if (payoutDl) payoutDl.innerHTML = allOptions;
+
+    const mandateDl = document.getElementById("mandateBankDatalist");
+    if (mandateDl) mandateDl.innerHTML = commercialOptions;
 }
 
 function _attachDatalistToHiddenInput(inputId, hiddenId) {
