@@ -737,6 +737,49 @@ document.getElementById("viewInvoiceBtn")?.addEventListener("click", () => {
     }
 });
 
+document.getElementById("sendInvoiceBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("sendInvoiceBtn");
+    btn.disabled = true;
+    btn.innerText = "Sending...";
+    
+    try {
+        const payload = {
+            email: document.getElementById("invCustomerEmail").innerText,
+            customer_name: document.getElementById("invCustomerName").innerText,
+            plan_name: document.getElementById("invPlanName").innerText,
+            amount: document.getElementById("invPlanAmount").innerText,
+            checkout_link: document.getElementById("invPayBtn").href
+        };
+        
+        const vaBox = document.getElementById("invVaBox");
+        if (!vaBox.classList.contains("hidden")) {
+            payload.va_bank_name = document.getElementById("invVaBank").innerText;
+            payload.va_account_number = document.getElementById("invVaNumber").innerText;
+        }
+        
+        const res = await fetch(`${API_BASE}/v1/subscriptions/send-invoice`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Tenant-Id": apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            showMessage("Success", "Invoice emailed to customer successfully!");
+        } else {
+            const err = await res.json();
+            showMessage("Error", err.detail || "Failed to send invoice", true);
+        }
+    } catch (e) {
+        showMessage("Error", "Network error sending invoice", true);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "✉️ Email Invoice";
+    }
+});
+
 // Renders
 function renderPlans() {
     const list = document.getElementById("plansList");
