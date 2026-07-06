@@ -300,5 +300,8 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
             # DO NOT mark the attempt failed — leave it pending so it can be retried.
             logger.error(f"Reconcile lookup error for {attempt.merchant_tx_ref}: {e}")
             results["errors"] += 1
+            if "error_messages" not in results:
+                results["error_messages"] = []
+            results["error_messages"].append(str(e))
 
     return {"message": "Manual reconciliation complete", "details": results, "total_processed": len(pending_attempts)}
