@@ -190,11 +190,16 @@ class NombaClient:
     # --- RAIL 3: DIRECT DEBIT ---
 
     async def create_mandate(self, customer_account_number: str, bank_code: str, customer_name: str, customer_phone: str, customer_email: str, merchant_reference: str) -> dict:
+        # Nomba direct debit requires a 3-5 digit CBN bank code, not the 6-digit NIP code.
+        # If the caller passed a NIP code, strip leading zeros to get the CBN form.
+        cbn_code = bank_code.lstrip("0") if len(bank_code) > 5 else bank_code
+
         payload = {
             "customerAccountNumber": customer_account_number,
-            "bankCode": bank_code,
+            "bankCode": cbn_code,
+            "subscriberCode": self.sub_account_id,
             "customerName": customer_name,
-            "customerAddress": "Unknown",
+            "customerAddress": "Nigeria",
             "customerAccountName": customer_name,
             "frequency": "VARIABLE",
             "narration": "Subscription mandate",
@@ -247,10 +252,11 @@ class NombaClient:
 
     async def lookup_bank_account(self, account_number: str, bank_code: str) -> dict:
         """Resolve bank account number to account name (name enquiry)."""
+        cbn_code = bank_code.lstrip("0") if len(bank_code) > 5 else bank_code
         return await self._request(
             "POST",
             "/v1/transfers/bank/lookup",
-            json_data={"accountNumber": account_number, "bankCode": bank_code}
+            json_data={"accountNumber": account_number, "bankCode": cbn_code}
         )
 
     async def payout_to_bank(self, amount_kobo: int, account_number: str, bank_code: str, account_name: str, narration: str = "Payout") -> dict:
