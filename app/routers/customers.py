@@ -200,10 +200,16 @@ def delete_customer(customer_id: str, session: Session = Depends(get_session), t
         attempts = session.exec(select(BillingAttempt).where(BillingAttempt.subscription_id == sub.id)).all()
         for attempt in attempts:
             session.delete(attempt)
+    # Flush billing attempt deletes to DB before touching subscriptions
+    session.flush()
+
+    for sub in subscriptions:
         session.delete(sub)
-        
+    # Flush subscription deletes before removing the customer row
+    session.flush()
+
     session.delete(customer)
-    
+
     try:
         session.commit()
     except Exception as e:
