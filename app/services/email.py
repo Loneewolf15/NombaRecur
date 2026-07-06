@@ -5,28 +5,26 @@ logger = logging.getLogger(__name__)
 
 
 def _send(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
-    """Low-level send via Sendbyte API. Returns True on success, False on failure."""
-    import httpx
-    url = "https://api.sendbyte.africa/v1/emails"
-    headers = {
-        "Authorization": f"Bearer {settings.sendbyte_api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "to": to_email,
-        "from": settings.email_from,
-        "subject": subject,
-        "html": html_body,
-        "text": text_body
-    }
+    """Low-level send via Sendbyte SMTP. Returns True on success, False on failure."""
+    import smtplib
+    from email.message import EmailMessage
+    
+    msg = EmailMessage()
+    msg['From'] = settings.email_from
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.set_content(text_body)
+    msg.add_alternative(html_body, subtype='html')
     
     try:
-        res = httpx.post(url, headers=headers, json=payload, timeout=10.0)
-        res.raise_for_status()
-        logger.info(f"Sendbyte Email sent to {to_email}: {subject}")
+        with smtplib.SMTP('smtp.sendbyte.africa', 587) as s:
+            s.starttls()
+            s.login('apikey', settings.sendbyte_api_key)
+            s.send_message(msg)
+        logger.info(f"Sendbyte SMTP Email sent to {to_email}: {subject}")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email via Sendbyte to {to_email}: {e}")
+        logger.error(f"Failed to send email via Sendbyte SMTP to {to_email}: {e}")
         return False
 
 
