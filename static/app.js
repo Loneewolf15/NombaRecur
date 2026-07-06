@@ -811,13 +811,23 @@ async function loadBanks() {
 
 function _populateBankDropdowns() {
     if (!banks.length) return;
-    const options = `<option value="">— Select Bank —</option>` +
-        banks.map(b => `<option value="${b.bankCode || b.code}">${b.bankName || b.name} (${b.bankCode || b.code})</option>`).join("");
-    ["payoutBankCode", "mandateBankCode"].forEach(id => {
-        const sel = document.getElementById(id);
-        if (sel) sel.innerHTML = options;
+    const options = banks.map(b => `<option value="${b.bankName || b.name} - ${b.bankCode || b.code}"></option>`).join("");
+    const dl = document.getElementById("bankDatalist");
+    if (dl) dl.innerHTML = options;
+}
+
+function _attachDatalistToHiddenInput(inputId, hiddenId) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!input || !hidden) return;
+    input.addEventListener('input', () => {
+        const val = input.value;
+        const match = val.match(/ - (\d{3,})$/);
+        hidden.value = match ? match[1] : "";
     });
 }
+_attachDatalistToHiddenInput("mandateBankInput", "mandateBankCode");
+_attachDatalistToHiddenInput("payoutBankInput", "payoutBankCode");
 
 // ─────────────────────────────────────────────
 // Transaction History

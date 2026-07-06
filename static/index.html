@@ -191,9 +191,8 @@
                             </div>
                             <div class="form-group">
                                 <label>Bank</label>
-                                <select id="mandateBankCode" required>
-                                    <option value="">Loading banks...</option>
-                                </select>
+                                <input list="bankDatalist" id="mandateBankInput" placeholder="Type to search banks..." required autocomplete="off">
+                                <input type="hidden" id="mandateBankCode">
                             </div>
                             <div class="form-group">
                                 <label>Phone Number</label>
@@ -281,9 +280,8 @@
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                                 <div class="form-group">
                                     <label>Destination Bank</label>
-                                    <select id="payoutBankCode" required>
-                                        <option value="">Loading banks...</option>
-                                    </select>
+                                    <input list="bankDatalist" id="payoutBankInput" placeholder="Type to search banks..." required autocomplete="off">
+                                    <input type="hidden" id="payoutBankCode">
                                 </div>
                                 <div class="form-group">
                                     <label>Account Number</label>
@@ -389,6 +387,9 @@
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner"></div>
     </div>
+
+    <!-- Datalist for Banks -->
+    <datalist id="bankDatalist"></datalist>
 
     <script src="/static/app.js"></script>
 </body>
