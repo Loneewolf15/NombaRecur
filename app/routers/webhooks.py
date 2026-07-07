@@ -219,6 +219,16 @@ async def _handle_payment_success(data: dict, session: Session):
                 session.add(customer)
                 logger.info(f"Saved new tokenized card for customer {customer.id}")
                 
+                # Check for Verve card which requires per-transaction OTP
+                card_type = tokenized_card_data.get("cardType", "")
+                if not card_type:
+                    card_type = transaction.get("cardIssuer", "")
+                    
+                if card_type.lower() == "verve":
+                    logger.warning(f"Verve card enrolled for {customer.id}. Tagging subscription {subscription.id} as active_manual_only.")
+                    subscription.status = "active_manual_only"
+                    session.add(subscription)
+                
         session.commit()
         logger.info(f"Successfully processed webhook for subscription {subscription.id}")
         # Success email is now sent inside _mark_attempt_success, so no duplicate call here.

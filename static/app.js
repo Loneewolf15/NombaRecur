@@ -849,16 +849,17 @@ function renderSubscriptions() {
     list.innerHTML = subscriptions.map(s => {
         const plan = plans.find(p => p.id === s.plan_id) || { name: 'Unknown Plan', amount_kobo: 0 };
         const customer = customers.find(c => c.id === s.customer_id) || { email: 'Unknown' };
-        const statusClass = s.status === 'active' ? 'success' : s.status === 'canceled' ? '' : 'error';
+        const statusClass = s.status === 'active' ? 'success' : s.status === 'active_manual_only' ? 'warning' : s.status === 'canceled' ? '' : 'error';
         const cancelBtn = s.status !== 'canceled' 
-            ? `<button class="btn btn-danger" onclick="cancelSubscription('${s.id}')">Cancel</button>`
-            : `<span class="text-muted">Canceled</span>`;
+            ? `<button class="btn btn-danger btn-sm" onclick="cancelSubscription('${s.id}')">Cancel</button>` 
+            : '';
+        const displayStatus = s.status === 'active_manual_only' ? 'Requires OTP (Verve)' : s.status;
             
         return `
         <div class="list-item flex-between">
             <div>
                 <strong>${customer.email}</strong> - ${plan.name} (₦${(plan.amount_kobo / 100).toFixed(2)})
-                <span class="badge ${statusClass}" style="margin-left: 8px;">${s.status}</span>
+                <span class="badge ${statusClass}" style="margin-left: 8px;">${displayStatus}</span>
                 <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Next Billing: ${new Date(s.next_billing_at).toLocaleString()}</div>
             </div>
             ${cancelBtn}
