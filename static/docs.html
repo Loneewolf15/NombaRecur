@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NombaRecur - Developer Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --accent-color: #58a6ff;
+            --success-color: #238636;
+            --card-bg: #161b22;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--accent-color);
+            margin-top: 30px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .code-block {
+            background-color: #010409;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.95rem;
+            color: #c9d1d9;
+            margin: 20px 0;
+        }
+
+        .alert {
+            background-color: rgba(88, 166, 255, 0.1);
+            border-left: 4px solid var(--accent-color);
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            color: var(--text-primary);
+        }
+
+        .alert-success {
+            background-color: rgba(35, 134, 54, 0.1);
+            border-left: 4px solid var(--success-color);
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        ul {
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--success-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NombaRecur Documentation</h1>
+            <p>Everything you need to integrate multi-rail recurring billing into your platform.</p>
+            <a href="/v1/portal/login" class="btn">Go to Dashboard</a>
+        </header>
+
+        <section>
+            <h2>Overview</h2>
+            <p>NombaRecur acts as an abstraction layer between your platform and the Nomba API. Instead of building complex cron jobs, tracking failed charges, and handling Virtual Account Webhooks yourself, NombaRecur does it all for you.</p>
+            
+            <div class="alert">
+                <strong>Multi-Rail Fallback:</strong> If a customer's tokenized card charge fails (or if they use a Verve card which requires OTP), NombaRecur automatically falls back to a dedicated Virtual Account assigned to that customer.
+            </div>
+        </section>
+
+        <section>
+            <h2>1. Node.js SDK Installation</h2>
+            <p>We provide a lightweight Node.js SDK to interact with your NombaRecur instance.</p>
+            <div class="code-block">
+npm install nombarecur-js
+            </div>
+        </section>
+
+        <section>
+            <h2>2. Quickstart</h2>
+            <p>Initialize the SDK using the Tenant API Key found in your NombaRecur Dashboard.</p>
+            
+            <div class="code-block">
+import { NombaRecur } from "nombarecur-js";
+
+// Initialize with your API Key and your NombaRecur Base URL
+const client = new NombaRecur(
+    "tenant_xxxxx_yyyyyy", 
+    "https://nomba-recur.vercel.app"
+);
+
+async function createSub() {
+    // 1. Create a customer
+    const customer = await client.createCustomer({
+        email: "customer@example.com",
+        name: "Jane Doe"
+    });
+    
+    // 2. Create a billing plan
+    const plan = await client.createPlan({
+        name: "Pro Tier",
+        amount_kobo: 500000 // 5,000 NGN
+    });
+    
+    // 3. Subscribe customer to the plan
+    const sub = await client.createSubscription({
+        customer_id: customer.id,
+        plan_id: plan.id,
+        callback_url: "https://your-website.com/payment-success"
+    });
+    
+    console.log("Redirect user to:", sub.checkout_url);
+}
+            </div>
+        </section>
+
+        <section>
+            <h2>3. Canceling Subscriptions</h2>
+            <p>You can easily cancel an active subscription at any time using the SDK.</p>
+            <div class="code-block">
+await client.cancelSubscription("sub_xxxxxxx");
+            </div>
+        </section>
+
+        <section>
+            <h2>4. Webhooks</h2>
+            <p>NombaRecur manages all Nomba webhooks internally to automatically reconcile billing state. You <strong>do not</strong> need to listen to Nomba webhooks directly.</p>
+            <div class="alert alert-success">
+                <strong>Dashboard Integration:</strong> Just log into the NombaRecur Dashboard to see real-time MRR, active subscribers, and a live feed of all successful and failed billing attempts!
+            </div>
+        </section>
+    </div>
+</body>
+</html>

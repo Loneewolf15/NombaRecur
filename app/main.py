@@ -39,6 +39,12 @@ from app.routers import dashboard, portal
 app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
 app.include_router(portal.router, prefix="/v1/portal", tags=["Portal"])
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/documentation", tags=["Documentation"])
+def documentation():
+    return RedirectResponse(url="/static/docs.html")
+
 # Serve frontend
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
 os.makedirs(static_dir, exist_ok=True)
