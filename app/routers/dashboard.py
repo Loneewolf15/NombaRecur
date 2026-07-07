@@ -281,6 +281,25 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
                 subscription = session.get(Subscription, attempt.subscription_id)
                 plan = session.get(Plan, subscription.plan_id)
                 _mark_attempt_success(session, attempt, subscription, plan)
+                
+                # If this was an initial card checkout, capture the token (if webhook was lost)
+                token_key = res.get("tokenizedCard", {}).get("tokenKey") or res.get("cardDetails", {}).get("tokenKey")
+                if token_key:
+                    from app.models.customer import Customer
+                    from app.utils.crypto import encrypt_val
+                    customer = session.get(Customer, subscription.customer_id)
+                    if customer:
+                        customer.nomba_token_key_enc = encrypt_val(token_key)
+                        
+                        # Handle Verve guard during reconciliation too
+                        card_type = res.get("tokenizedCard", {}).get("cardType", "") or res.get("cardDetails", {}).get("cardType", "")
+                        if card_type.lower() == "verve":
+                            subscription.status = "active_manual_only"
+                            
+                        session.add(customer)
+                        session.add(subscription)
+                        session.commit()
+                        
                 results["success"] += 1
             elif status_msg in ("pending", "created", "abandoned", "new"):
                 # Still unpaid on Nomba's end, leave it pending so the user can still pay it!
@@ -296,12 +315,18 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
             session.commit()
 
         except Exception as e:
-            # API lookup itself failed (network, wrong path, etc.)
-            # DO NOT mark the attempt failed — leave it pending so it can be retried.
-            logger.error(f"Reconcile lookup error for {attempt.merchant_tx_ref}: {e}")
-            results["errors"] += 1
-            if "error_messages" not in results:
-                results["error_messages"] = []
-            results["error_messages"].append(str(e))
+            from app.services.nomba import NombaAPIError
+            if isinstance(e, NombaAPIError) and e.code == "400" and "Error fetching checkout transaction" in str(e):
+                # In LIVE environment, Nomba returns 400 if the transaction hasn't been paid/found yet.
+                # In Sandbox, it returns 200 with {"success": False}. 
+                # We treat this 400 as "still pending".
+                pass
+            else:
+                # Actual API lookup failed (network, auth, etc.)
+                logger.error(f"Reconcile lookup error for {attempt.merchant_tx_ref}: {e}")
+                results["errors"] += 1
+                if "error_messages" not in results:
+                    results["error_messages"] = []
+                results["error_messages"].append(str(e))
 
     return {"message": "Manual reconciliation complete", "details": results, "total_processed": len(pending_attempts)}
