@@ -247,9 +247,13 @@ async def reconcile_pending_attempts(session: Session = Depends(get_session), te
     from app.models.plan import Plan
     from app.services.billing import _mark_attempt_success
     
+    from sqlmodel import or_
     stmt = select(BillingAttempt).where(
         BillingAttempt.tenant_id == tenant.id,
-        BillingAttempt.status == "pending"
+        or_(
+            BillingAttempt.status == "pending",
+            (BillingAttempt.status == "failed") & (BillingAttempt.error_code == "TIMEOUT")
+        )
     )
     pending_attempts = session.exec(stmt).all()
     

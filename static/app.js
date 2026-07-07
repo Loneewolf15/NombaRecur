@@ -145,6 +145,10 @@ navLinks.forEach(link => {
         const viewId = link.getAttribute("data-view");
         pageTitle.innerText = link.innerText;
 
+        // Auto-close mobile sidebar
+        document.getElementById("sidebar").classList.remove("open");
+        document.getElementById("sidebarOverlay").classList.remove("open");
+
         views.forEach(v => v.classList.remove("active"));
         document.getElementById(`view-${viewId}`).classList.add("active");
         

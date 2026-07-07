@@ -136,12 +136,11 @@ class NombaClient:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
             data = response.json()
-            # Nomba's API can return code "00" but status=false (e.g., Verve OTP challenges)
             if data.get("code") not in ("00", "200"):
                 raise NombaAPIError(data.get("code", "UNKNOWN"), data.get("description", str(data)))
-            
-            # Explicitly catch top-level status=false
-            if data.get("status") is False:
+                
+            # Safely catch Verve OTP challenges ONLY on the tokenized-card endpoint
+            if path == "/v1/checkout/tokenized-card-payment" and data.get("status") is False:
                 err_msg = data.get("data", {}).get("message") or data.get("description") or "Operation failed"
                 raise NombaAPIError("OTP_CHALLENGE_OR_FAILED", err_msg)
                 

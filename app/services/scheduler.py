@@ -93,13 +93,18 @@ async def run_crash_recovery():
                 session.commit()
             
             except Exception as e:
-                logger.error(f"Reconciliation query failed for {attempt.merchant_tx_ref}: {e}")
-                attempt.status = "failed"
-                attempt.error_code = "TIMEOUT"
-                attempt.error_message = f"Webhook missed, reconciliation API failed: {e}"
-                attempt.completed_at = datetime.utcnow()
-                session.add(attempt)
-                session.commit()
+                from app.services.nomba import NombaAPIError
+                if isinstance(e, NombaAPIError) and e.code == "400" and "Error fetching checkout transaction" in str(e):
+                    # Live environment returning 400 instead of 200 with success:false
+                    logger.warning(f"Scheduler reconcile: Nomba returned 400 for {attempt.merchant_tx_ref}, keeping pending.")
+                else:
+                    logger.error(f"Reconciliation query failed for {attempt.merchant_tx_ref}: {e}")
+                    attempt.status = "failed"
+                    attempt.error_code = "TIMEOUT"
+                    attempt.error_message = f"Webhook missed, reconciliation API failed: {e}"
+                    attempt.completed_at = datetime.utcnow()
+                    session.add(attempt)
+                    session.commit()
 
 def start_scheduler():
     if not scheduler.running:
